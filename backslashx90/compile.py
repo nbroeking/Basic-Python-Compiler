@@ -1,20 +1,26 @@
+#!/usr/bin/python
 # Main Python Module
 # Written By Nicolas Broeking and Josh Rahm
 # Team: x90
 
-import compiler
+import compiler.ast as pyast
+import compiler as comp
+import stage1
+import core
+import sys
 
-def main():
-    ast = compiler.parse('5 + 4 + input()')
-    print(dir(ast))
+def main( argv):
+
+    if len(argv) != 2:
+        print("Usage: python compiler.py <file>")
+        sys.exit()
+    ast = comp.parseFile(argv[1])
+    print("Original: ")
     print(ast)
-    print(getDepth(ast))
-
-
-def getDepth(a_ast):
-    if len(a_ast.getChildNodes()) == 0:
-        return 0
-    return max([getDepth(i) for i in a_ast.getChildNodes()]) + 1
+    
+    flattened = stage1.flatten(ast)
+    print("\nFlattened:")
+    print (flattened)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)

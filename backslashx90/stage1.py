@@ -126,14 +126,3 @@ def flatten(ast):
 
 def print_core_ast( core ): # core : [AST]
     return "\n".join([i._to_str() for i in core])
-
-
-def main(argv):
-    ast = comp.parse(argv[1])
-    print(ast)
-    stuff = flatten(ast)
-    print(stuff)
-    print(print_core_ast(stuff))
-
-if __name__ == "__main__":
-    main(sys.argv)
