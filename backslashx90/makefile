@@ -3,7 +3,7 @@
 
 test: ; cd runtime && make ; cd ../tests && ./generateTests.sh && ./runTests
 
-.PHONY: package
+.PHONY: package test
 package:
 	mkdir -p package
 	cp *.py package/
