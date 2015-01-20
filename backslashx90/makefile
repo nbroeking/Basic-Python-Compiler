@@ -1,6 +1,6 @@
 #Not a normal make file
 #Written By: Nic Broeking
 
-test: ; cd runtime && make ; cd tests && ./generateTests.sh
+test: ; cd runtime && make ; cd ../tests && ./generateTests.sh
 
 clean: ; cd runtime && make clean; rm *.pyc ; rm tests/*.to ; rm tests/*.s ; rm tests/file1 ; rm tests/file2

@@ -2,6 +2,7 @@
 #
 
 import core
+import platform
 
 def stage2(ast, fname):
     st2 = Stage2(fname);
@@ -21,9 +22,14 @@ class Stage2:
     def assemble(self, ast):
         self.emit( '.data' );
         self.emit( '.text' );
-        self.emit( '.globl main' );
-        self.emit( '.type main, @function' );
-        self.emit( 'main:' );
+       
+        if platform.system() == 'Darwin':
+            self.emit( '.globl _main')
+            self.emit('_main:')
+        else:
+            self.emit( '.globl main' );
+            self.emit( '.type main, @function' );
+            self.emit( 'main:' );
         
         size = self.changeNames(ast);
         self.preamble()
