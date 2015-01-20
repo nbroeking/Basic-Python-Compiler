@@ -35,9 +35,9 @@ class Stage2:
         self.preamble()
         self.emit( '    subl $%s, %%esp' % (size,)  );
         
-        print '---'
-        for i in ast:
-            print (i._to_str())
+        # print '---'
+        # for i in ast:
+        #     print (i._to_str())
 
         self.instructionSelection(ast);
 
