@@ -24,11 +24,14 @@ echo -e "\n">&3
 for ((i=0;i<${#src[@]};i++)) ; do
     echo "echo \"Running Test: ${src[$i]}\"">&3
     echo "gcc -m32 -otest ${src[$i]} ../runtime/libruntime.a -lm">&3
-    echo "./test > file1">&3
-    echo "python ${src[$i]} > file2">&3
-    echo "diff file1 file2">&3
+    echo "echo 10 1 -5 -2 2 65 2 -0 -9 10 | ./test > file1">&3
+    echo "echo 10 1 -5 -2 2 65 2 -0 -9 10 | python ${src[$i]} > file2">&3
+    echo "diff file1 file2 > file3">&3
     echo 'if '\$''\?''>&3
-    echo "${src[$i]}: passed">&3
+    echo "\t${src[$i]}: passed">&3
+    echo 'elif'>&3
+    echo '\t echo failed'>&3
+    echo 'fi'>&3
     echo -e "\n">&3
 done
 
