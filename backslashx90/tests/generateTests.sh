@@ -23,7 +23,7 @@ echo -e "\n">&3
 # run them
 for ((i=0;i<${#src[@]};i++)) ; do
     echo "echo \"Running Test: ${src[$i]}\"">&3
-    echo "gcc -o test ${src[$i]}">&3
+    echo "gcc -m32 -otest ${src[$i]} ../runtime/libruntime.a -lm">&3
     echo "./test > file1">&3
     echo "python ${src[$i]} > file2">&3
     echo "diff file1 file2">&3

@@ -34,10 +34,27 @@ class CallFunc:
     def __init__(self, lhs, args):
         self.lhs = lhs
         self.args = args
-        self.children = [self.lhs] + self.args
+        self.children = list(self.args)
 
     def _to_str(self):
         return self.lhs._to_str() + "(" + ",".join([i._to_str() for i in self.args]) + ")"
+
+class Neg:
+    def __init__(self, rhs):
+        self.rhs = rhs;
+        self.children = [rhs];
+
+    def _to_str(self):
+        return "- " + self.rhs._to_str()
+
+class Print:
+    def __init__(self, rhs):
+        self.rhs = rhs
+        self.children = [self.rhs]
+
+    def _to_str(self):
+        return "print " + self.rhs._to_str()
+        
 
 # an addition. In this step, an addition may only contain Const's and
 # Name's as the possible lhs's and rhs's. No sub additions.

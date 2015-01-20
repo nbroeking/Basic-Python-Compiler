@@ -12,10 +12,20 @@ import sys
 
 def main( argv):
 
-    if len(argv) != 2:
+    outfile = None
+
+    i = 1
+    while argv[i].startswith('-'):
+        if argv[i] == '-o':
+            outfile = argv[i+1]
+            i += 1
+        i += 1
+            
+
+    if len(argv) < 2:
         print("Usage: python compiler.py <file>")
         sys.exit()
-    ast = comp.parseFile(argv[1])
+    ast = comp.parseFile(argv[i])
     print("Original: ")
     print(ast)
     
@@ -24,10 +34,12 @@ def main( argv):
     for i in flattened:
         print(i._to_str())
 
-    newname = argv[1]
-    if newname.endswith('.py'):
-        newname=newname[:-3]+".s"
-    stage2.stage2(flattened, newname);
+    if outfile is None:
+        outfile = argv[i]
+        if outfile.endswith('.py'):
+            outfile=outfile[:-3]+".s"
+
+    stage2.stage2(flattened, outfile);
     
 
 if __name__ == "__main__":

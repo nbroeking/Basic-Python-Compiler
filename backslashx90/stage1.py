@@ -58,22 +58,18 @@ class Stage1:
         lhs = lst[0]
         args = lst[1:]
 
-        if is_base(lhs) and all([is_base(i) for i in args]):
-            var = self.tmpvar()
-            self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), [base_cov(i) for i in args]))]
-            return var
-
-        if not is_base(lhs):
-            var = self.loose_flatten(lhs)
-            return self.loose_flatten(pyast.CallFunc(pyast.Name(var), args, None, None))
-
+        # flatten the arguments
         for i in range(len(args)):
             if not is_base(args[i]):
                 var = self.loose_flatten(args[i])
                 argsp = args[0:i] + (pyast.Name(var),) + args[i+1:]
                 return self.loose_flatten(pyast.CallFunc(lhs, argsp, None, None))
 
-        raise Exception("Why did this not pass the first check?")
+        # args are flat for sure
+        
+        var = self.tmpvar()
+        self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
+        return var
         
     def loose_flatten(self, pyst):
         if is_base(pyst):
@@ -88,8 +84,19 @@ class Stage1:
             return self.loose_flatten_op(pyst)
 
         if isinstance(pyst, pyast.CallFunc):
-        
             return self.loose_flatten_func(pyst)
+
+        if isinstance(pyst, pyast.UnarySub):
+            rhs = pyst.getChildren()[0]
+            if is_base( rhs ):
+                var = self.tmpvar()
+                self.buffer += [core.Assign(var, core.Neg(base_cov(rhs)))];
+                return var
+            else:
+                var = self.loose_flatten(rhs);
+                return self.loose_flatten(pyast.UnarySub(pyast.Name(var)));
+
+            return
 
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
@@ -111,6 +118,21 @@ class Stage1:
             self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
         else:
             raise Exception("Expected an Assign instance")
+
+    def flatten_print(self, pyst):
+        if isinstance(pyst, pyast.Printnl):
+            var = self.loose_flatten(pyst.getChildren()[0]);
+
+            if var is None:
+                rhs = base_cov(pyst.getChildren()[0])
+            else:
+                rhs = core.Name(var);
+
+            self.buffer += [core.Print(rhs)]
+
+        else:
+            raise Exception("Expected an Printnl instance")
+
 
     def flatten(self, pyst):
         if isinstance(pyst, pyast.Assign):
@@ -136,6 +158,12 @@ class Stage1:
 
         elif isinstance(pyst, pyast.Add):
             self.loose_flatten(pyst)
+
+        elif isinstance(pyst, pyast.UnarySub):
+            self.loose_flatten(pyst);
+
+        elif isinstance(pyst, pyast.Printnl):
+            self.flatten_print(pyst);
 
         elif is_base(pyst):
             return base_cov(pyst)

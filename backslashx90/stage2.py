@@ -46,7 +46,9 @@ class Stage2:
         if isinstance(ast, core.Const):
             return "$%s" % (ast.raw,) 
         elif isinstance(ast, core.Name):
-            return self.to_offset(ast.name)
+            if( isinstance(ast.name, int) ):
+                return self.to_offset(ast.name)
+            return ast.name
 
     def instructionSelection(self, lst):
         for ast in lst:
@@ -57,12 +59,26 @@ class Stage2:
                     self.emit( '    movl %s, %%eax' % self.to_base_asm(op.rhs) );
                     self.emit( '    addl %s, %%eax' % self.to_base_asm(op.lhs) );
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
+                if isinstance(op, core.Neg):
+                    self.emit( '    movl %s, %%eax' % self.to_base_asm(op.rhs) );
+                    self.emit( '    negl %eax' );
+                    self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.Const):
                     self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.Name):
                     self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
+                elif isinstance(op, core.CallFunc):
+                    for i in op.args:
+                        self.emit( '    push %s' % self.to_base_asm(i) )
+                    self.emit('    call %s' % self.to_base_asm(op.lhs))
+                    self.emit('    movl %%eax, %s' % self.to_offset(name))
+
+            elif isinstance(ast, core.Print):
+                self.emit( '    movl %s, %%eax' % self.to_base_asm(ast.rhs) )
+                self.emit( '    pushl %eax' )
+                self.emit( '    call print_int_nl' )
 
     def changeNames(self, ast):
         self.namenum = 4
