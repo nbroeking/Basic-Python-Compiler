@@ -35,6 +35,7 @@ class Stage2:
 
         self.instructionSelection(ast);
 
+        self.emit('    movl $0, %eax');
         self.emit('    leave');
         self.emit('    ret');
 
@@ -64,6 +65,7 @@ class Stage2:
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
 
     def changeNames(self, ast):
+        self.namenum = 4
 
         def changeName_(stmt):
             if isinstance(stmt, core.Name) or isinstance(stmt, core.Assign):
@@ -80,6 +82,7 @@ class Stage2:
             
         for i in ast:
             changeName_(i)
+
         return self.namenum;
         
     def preamble(self):

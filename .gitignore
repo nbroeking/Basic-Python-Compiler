@@ -1,3 +1,7 @@
 #Python compiled code
 *.pyc
 *.pyo
+*.swp
+*.swo
+tags
+runTests

@@ -3,4 +3,4 @@
 
 test: ; cd tests && ./generateTests.sh
 
-clean: ; rm *.pyc ; rm tests/*.to
+clean: ; rm *.pyc ; rm tests/*.to ; rm tests/*.s ; rm tests/file1 ; rm tests/file2
