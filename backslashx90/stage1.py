@@ -45,13 +45,13 @@ class Stage1:
             return var
 
         else:
-            if not is_base(rhs):
-                var = self.loose_flatten(rhs)
-                return self.loose_flatten(pyst.__class__((lhs, pyast.Name(var))))
-
-            else:
+            if not is_base(lhs):
                 var = self.loose_flatten(lhs)
                 return self.loose_flatten(pyst.__class__((pyast.Name(var), rhs)))
+
+            else:
+                var = self.loose_flatten(rhs)
+                return self.loose_flatten(pyst.__class__((lhs, pyast.Name(var))))
 
     def loose_flatten_func(self, pyst):
         lst = pyst.getChildNodes();

@@ -4,3 +4,10 @@
 test: ; cd tests && ./generateTests.sh
 
 clean: ; rm *.pyc ; rm tests/*.to ; rm tests/*.s ; rm tests/file1 ; rm tests/file2
+
+.PHONY: package
+package:
+	mkdir -p package
+	cp *.py package/
+	cp runtime/*.{c,h} package
+	cd package && zip -r ../package.zip *

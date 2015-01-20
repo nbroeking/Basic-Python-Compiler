@@ -26,13 +26,13 @@ def main( argv):
         print("Usage: python compiler.py <file>")
         sys.exit()
     ast = comp.parseFile(argv[i])
-    print("Original: ")
-    print(ast)
+    # print("Original: ")
+    # print(ast)
     
     flattened = stage1.flatten(ast)
-    print("\nFlattened:")
-    for i in flattened:
-        print(i._to_str())
+    # print("\nFlattened:")
+    # for i in flattened:
+    #     print(i._to_str())
 
     if outfile is None:
         outfile = argv[i]
