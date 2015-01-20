@@ -3,10 +3,9 @@
 # the current project.
 
 import compiler.ast as pyast
-import compiler as comp
 import core
-import sys
 
+# Detect if the node is the base case
 def is_base(pyst):
     return isinstance(pyst, pyast.Const) or \
            isinstance(pyst, pyast.Name)
@@ -78,15 +77,18 @@ class Stage1:
         
     def loose_flatten(self, pyst):
         if is_base(pyst):
+            # already flat
             return None
 
         if isinstance(pyst, pyast.Add) or \
            isinstance(pyst, pyast.Mul) or \
            isinstance(pyst, pyast.Div):
+           # if arithmetic
 
             return self.loose_flatten_op(pyst)
 
         if isinstance(pyst, pyast.CallFunc):
+        
             return self.loose_flatten_func(pyst)
 
         else:
@@ -94,11 +96,18 @@ class Stage1:
 
     def flatten_assign(self, pyst):
         if isinstance(pyst, pyast.Assign):
+            # if instance of assign, flatten the rhs
             var = self.loose_flatten(pyst.getChildren()[1])
+
+            # var = None if no temp var needed, or name of temp var
             if var is None:
+                # already flat, convert from python ast -> stage1 ast
                 rhs = base_cov(pyst.getChildren()[1])
             else:
+                # rhs = name of var e.g. $1$
                 rhs = core.Name(var)
+
+            # append to the buffer an assignment
             self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
         else:
             raise Exception("Expected an Assign instance")
@@ -106,20 +115,37 @@ class Stage1:
     def flatten(self, pyst):
         if isinstance(pyst, pyast.Assign):
             self.flatten_assign(pyst)
+
         elif isinstance(pyst, pyast.Module):
+            # ignore module
             self.flatten(pyst.getChildren()[1])
+
         elif isinstance(pyst, pyast.Stmt):
+            # go through all children and flatten
             for i in pyst.getChildren():
                 self.flatten(i)
+
+        elif isinstance(pyst, pyast.CallFunc):
+            self.loose_flatten(pyst);
+
         elif isinstance(pyst, pyast.Discard):
             self.flatten(pyst.getChildren()[0])
+
         elif isinstance(pyst, pyast.Add):
             self.loose_flatten(pyst)
+
+        elif isinstance(pyst, pyast.Add):
+            self.loose_flatten(pyst)
+
+        elif is_base(pyst):
+            return base_cov(pyst)
+
         else:
             raise Exception("Unexpected " + pyst.__class__.__name__)
 
         return self.buffer
 
+# simply call flatten on a stage1
 def flatten(ast):
     sg1 = Stage1()
     return sg1.flatten(ast)

@@ -6,6 +6,7 @@
 import compiler.ast as pyast
 import compiler as comp
 import stage1
+import stage2
 import core
 import sys
 
@@ -20,7 +21,14 @@ def main( argv):
     
     flattened = stage1.flatten(ast)
     print("\nFlattened:")
-    print (flattened)
+    for i in flattened:
+        print(i._to_str())
+
+    newname = argv[1]
+    if newname.endswith('.py'):
+        newname=newname[:-3]+".s"
+    stage2.stage2(flattened, newname);
+    
 
 if __name__ == "__main__":
     main(sys.argv)
