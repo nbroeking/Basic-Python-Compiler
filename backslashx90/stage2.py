@@ -78,13 +78,19 @@ class Stage2:
                 elif isinstance(op, core.CallFunc):
                     for i in op.args:
                         self.emit( '    push %s' % self.to_base_asm(i) )
-                    self.emit('    call %s' % self.to_base_asm(op.lhs))
+                    if platform.system() == 'Darwin':
+                        self.emit('    call _%s' % self.to_base_asm(op.lhs))
+                    else:
+                        self.emit('    call %s' % self.to_base_asm(op.lhs))
                     self.emit('    movl %%eax, %s' % self.to_offset(name))
 
             elif isinstance(ast, core.Print):
                 self.emit( '    movl %s, %%eax' % self.to_base_asm(ast.rhs) )
                 self.emit( '    pushl %eax' )
-                self.emit( '    call print_int_nl' )
+                if platform.system() == 'Darwin':
+                    self.emit('    call _print_int_nl')
+                else:
+                    self.emit('    call print_int_nl' )
 
     def changeNames(self, ast):
         self.namenum = 4

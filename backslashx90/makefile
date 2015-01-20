@@ -11,4 +11,4 @@ package:
 	cp runtime/*.{c,h} package
 	cd package && zip -r ../package.zip *
 
-clean: ; cd runtime && make clean; rm *.pyc ; rm tests/*.to ; rm tests/*.s ; rm tests/file1 ; rm tests/file2
+clean: ; cd runtime && make clean; rm *.pyc ; cd .. ; rm tests/*.to ; rm tests/*.s ; rm tests/file* ; rm package.zip ; rm tests/tester
