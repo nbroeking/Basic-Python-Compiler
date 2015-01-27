@@ -27,7 +27,7 @@ def main( argv):
 
         i += 1
     if not debug:
-        sys.stdout = open('/dev/null', 'w')
+        sys.stdout = sys.stderr
             
 
     if len(argv) < 2:
@@ -37,6 +37,7 @@ def main( argv):
     # print("Original: ")
     # print(ast)
     
+    sys.stdout.write(open(argv[i],'r').read())
     ast = stage0.parseFile(argv[i])
     print ast
 
