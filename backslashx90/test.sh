@@ -16,14 +16,29 @@ green=$(echo -ne '\e[01;32m')
 cyan=$(echo -ne '\e[01;36m')
 nc=$(echo -ne '\e[00;0m')
 
-for i in tests/*.py ; do
+args=''
+tests=$(find tests -name '*.py')
+while [ $1 ] ; do
+    
+    case $1 in
+        -d) args="$args -d"
+        ;;
+        -t) 
+            shift
+            tests=$1
+        ;;
+    esac
+    shift
+done
+
+for i in $tests ; do
     real="$(echo -e "$input" | python2 $i)"
     if [ $? -ne 0 ] ; then
         echo "${red}Bad test. Python fails${nc}"
         echo "$real"
     else
         echo -n "${nc}"
-        python2 compile.py -d -o /tmp/$$test.s $i && \
+        python2 compile.py -o /tmp/$$test.s $args $i && \
             gcc -m32 -o/tmp/$$test /tmp/$$test.s runtime/libruntime.a -lm
         rc=$?
         echo -n "${cyan}Test $i ["

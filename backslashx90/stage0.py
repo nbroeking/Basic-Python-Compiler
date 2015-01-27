@@ -114,10 +114,29 @@ class Stage0:
             i -= 1
         return i
 
+    def matching_paren(self, tokens, i):
+        cnt = 1
+        i += 1
+        while cnt > 0:
+            if self.is_open_paren(tokens[i]):
+                cnt += 1
+            elif self.is_close_paren(tokens[i]):
+                cnt -= 1
+            i+=1
+        return i
+
+    def canstrip(self, tokens):
+        if not self.is_open_paren(tokens[0]):
+            return False
+        i = self.matching_paren(tokens, 0)
+        return i == len(tokens)
+
+
     def strip_paren(self, tokens):
-        while self.is_open_paren(tokens[0]) and \
-                self.is_close_paren(tokens[-1]):
-                tokens = tokens[1:-1]
+        print "BEFORE",tokens
+        while self.canstrip(tokens):
+            tokens = tokens[1:-1]
+        print "AFTER ",tokens
         return tokens
 
     def _parse(self, tokens):

@@ -1,8 +1,9 @@
 #Not a normal make file
 #Written By: Nic Broeking
 
-test: ; cd runtime && make ; cd .. ; ./test.sh
+TEST_FLAGS?=
 
+test: ; cd runtime && make ; cd .. ; ./test.sh $(TEST_FLAGS)
 .PHONY: package test
 package:
 	mkdir -p package
