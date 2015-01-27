@@ -54,12 +54,14 @@ class Stage0:
         lines = [strip_comments(x.strip(' \r\n\t')).rstrip() for x in lines]
         # coalesce
         i = 0
+        print "BEFORE", lines
         while i < len(lines) - 1:
             if lines[i].endswith('\\'):
                 lines[i] = lines[i][:-1] + lines[i+1]
-                lines.remove(i+1)
+                lines.pop(i+1)
             else:
                 i += 1
+        print "AFTER ", lines
     
         tokens = self._tokenize2( lines ) # retunr [[String]]
         tokens = [token for token in tokens if len(token) > 0]
