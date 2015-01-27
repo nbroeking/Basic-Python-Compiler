@@ -33,6 +33,11 @@ def parseFile(name):
     tokens = stage.tokenize()
     return stage.parse(tokens)
 
+def strip_comments(line):
+    if line.find('#') >= 0:
+        return line[:line.find('#')]
+    return line
+
 class Stage0:
     def __init__(self, filename):
         self.f = open(filename)       
@@ -46,9 +51,18 @@ class Stage0:
                 lines += parts
             
         #Clear all spaces
-        lines = [x.strip(' \r\n\t') for x in lines]
+        lines = [strip_comments(x.strip(' \r\n\t')).rstrip() for x in lines]
+        # coalesce
+        i = 0
+        while i < len(lines) - 1:
+            if lines[i].endswith('\\'):
+                lines[i] = lines[i][:-1] + lines[i+1]
+                lines.remove(i+1)
+            else:
+                i += 1
     
         tokens = self._tokenize2( lines ) # retunr [[String]]
+        tokens = [token for token in tokens if len(token) > 0]
             
         return tokens
 
@@ -60,8 +74,8 @@ class Stage0:
         i = 0
         while i < len(line):
             start = i
-            if line[i].isalpha():
-                while i < len(line) and (line[i].isalpha() or line[i].isdigit()):
+            if line[i].isalpha() or line[i] == '_':
+                while i < len(line) and (line[i].isalpha() or line[i].isdigit() or line[i] == '_'):
                     i += 1
                 buf.append(Identifier(line[start:i]))
 
