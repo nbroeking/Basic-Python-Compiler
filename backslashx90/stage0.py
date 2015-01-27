@@ -94,7 +94,8 @@ class Stage0:
     def parse(self, tokens):
         buf = []
         for i in tokens:
-            buf.append( self._parse(i) )
+            x = self._parse(i)
+            buf.append( x )
         return ast.Module(None,  \
                     ast.Stmt( buf ))
 
@@ -138,20 +139,19 @@ class Stage0:
             elif isinstance(tokens[0], Digits):
                 return ast.Const(int(tokens[0].digits))
 
-        if isinstance(tokens[0], Identifier):
-            if tokens[0].name == 'print':
-                return ast.Printnl([self._parse(tokens[1:])], None)
+        if isinstance(tokens[0], Identifier) and tokens[0].name == 'print':
+            return ast.Printnl([self._parse(tokens[1:])], None)
         else:
             # first thing, find operator=
             i = len(tokens) - 1 
             while i >= 0:
                 if isinstance(tokens[i], Operator):
                     if tokens[i].operator == '=':
-                        lhs = self._parse(tokens[0:i-1])
+                        lhs = self._parse(tokens[0:i])
                         rhs = self._parse(tokens[i+1:])
                         if not isinstance(lhs, ast.Name):
                             raise WTFException("Expected identifier")
-                        return ast.Assign([ast.AssName(lhs.name, OP_ASSIGN)], _parse(rhs))
+                        return ast.Assign([ast.AssName(lhs.name, 'OP_ASSIGN')], rhs)
                 i = self.next_token(tokens, i)
         
             # first thing, find operator+
@@ -181,4 +181,6 @@ class Stage0:
                     lhs = self._parse(tokens[0:i-1])
                     return ast.CallFunc(lhs, [])
                 i = self.next_token(tokens, i)
+
+            raise WTFException("python sux 1")
 
