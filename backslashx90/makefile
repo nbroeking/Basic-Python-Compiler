@@ -7,7 +7,8 @@ test: ; cd runtime && make ; cd ../tests && ./generateTests.sh && ./runTests
 package:
 	mkdir -p package
 	cp *.py package/
-	cp runtime/*.{c,h} package
+	cp runtime/*.c package
+	cp runtime/*.h package
 	cd package && zip -r ../package.zip *
 
 clean: ; cd runtime && make clean; cd .. ;rm *.pyc ; rm tests/*.s ; rm tests/file* ; rm package.zip ; rm tests/tester ; rm tests/test
