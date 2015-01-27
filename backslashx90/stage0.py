@@ -122,6 +122,7 @@ class Stage0:
 
     def _parse(self, tokens):
 
+        print tokens
         tokens = self.strip_paren(tokens)
         if len(tokens) == 1:
             # base case

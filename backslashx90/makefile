@@ -1,7 +1,7 @@
 #Not a normal make file
 #Written By: Nic Broeking
 
-test: ; cd runtime && make ; cd ../tests && ./generateTests.sh && ./runTests
+test: ; cd runtime && make ; cd .. ; ./test.sh
 
 .PHONY: package test
 package:

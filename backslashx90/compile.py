@@ -12,16 +12,22 @@ import core
 import sys
 
 def main( argv):
-    sys.stdout = open('/dev/null', 'w')
 
     outfile = None
+    debug = False
 
     i = 1
+
     while argv[i].startswith('-'):
         if argv[i] == '-o':
             outfile = argv[i+1]
             i += 1
+        if argv[i] == '-d':
+            debug = True
+
         i += 1
+    if not debug:
+        sys.stdout = open('/dev/null', 'w')
             
 
     if len(argv) < 2:
