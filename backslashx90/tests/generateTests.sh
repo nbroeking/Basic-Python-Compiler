@@ -14,6 +14,16 @@ rm -f ./runTests || true
 exec 3<> ./runTests
 
 os=`uname`
+input="10
+1
+-5
+-2
+2
+65
+2
+-0
+-9
+10"
 
 # some commonly used files to generate
 echo '#!/bin/bash'>&3
@@ -27,10 +37,10 @@ echo -e "\n">&3
 # run them
 for ((i=0;i<${#src[@]};i++)) ; do
     echo "echo \" \${cyan}Running Test: $i \${nc} \"">&3
-    echo "python2 ../compile.py -o tester.s ${src[$i]} > file1">&3
-    echo "gcc -m32 -otest tester.s ../runtime/libruntime.a -lm > file2">&3
-    echo "echo 10 1 -5 -2 2 65 2 -0 -9 10 | ./test >> file1">&3
-    echo "echo 10 1 -5 -2 2 65 2 -0 -9 10 | python2 ${src[$i]} >> file2">&3
+    echo "python2 ../compile.py -o tester.s ${src[$i]}">&3
+    echo "gcc -m32 -otest tester.s ../runtime/libruntime.a -lm">&3
+    echo "echo -e '$input' | ./test > file1">&3
+    echo "echo -e '$input' | python2 ${src[$i]} > file2">&3
     echo "diff file1 file2 > file3">&3
     echo 'if [ '\$''\?' == 0 ] '>&3
     echo 'then'>&3

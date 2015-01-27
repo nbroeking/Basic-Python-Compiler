@@ -48,13 +48,7 @@ class Stage0:
         #Clear all spaces
         lines = [x.strip(' \r\n\t') for x in lines]
     
-        print("STAGE1")
-        for y in lines:
-            print(y)
-
         tokens = self._tokenize2( lines ) # retunr [[String]]
-        for i in tokens:
-            print i
             
         return tokens
 
@@ -127,7 +121,6 @@ class Stage0:
         return tokens
 
     def _parse(self, tokens):
-        print "TOKENS", tokens
 
         tokens = self.strip_paren(tokens)
         if len(tokens) == 1:
@@ -139,6 +132,7 @@ class Stage0:
             elif isinstance(tokens[0], Digits):
                 return ast.Const(int(tokens[0].digits))
 
+        print tokens[0]
         if isinstance(tokens[0], Identifier) and tokens[0].name == 'print':
             return ast.Printnl([self._parse(tokens[1:])], None)
         else:
@@ -157,7 +151,6 @@ class Stage0:
             # first thing, find operator+
             i = len(tokens) - 1 
             while i >= 0:
-                print "Python sux", tokens[i]
                 if isinstance(tokens[i], Operator):
                     if tokens[i].operator == '+':
                         lhs = self._parse(tokens[0:i])

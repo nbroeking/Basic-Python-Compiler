@@ -12,6 +12,7 @@ import core
 import sys
 
 def main( argv):
+    sys.stdout = open('/dev/null', 'w')
 
     outfile = None
 
