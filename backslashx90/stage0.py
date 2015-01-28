@@ -54,14 +54,13 @@ class Stage0:
         lines = [strip_comments(x.strip(' \r\n\t')).rstrip() for x in lines]
         # coalesce
         i = 0
-        print "BEFORE", lines
+
         while i < len(lines) - 1:
             if lines[i].endswith('\\'):
                 lines[i] = lines[i][:-1] + lines[i+1]
                 lines.pop(i+1)
             else:
                 i += 1
-        print "AFTER ", lines
     
         tokens = self._tokenize2( lines ) # retunr [[String]]
         tokens = [token for token in tokens if len(token) > 0]
@@ -130,6 +129,21 @@ class Stage0:
             i -= 1
         return i
 
+    def next_token_right(self, tokens, i):
+        # skip parens if they are there
+        cnt = 0
+        if self.is_open_paren(tokens[i]):
+            cnt = 1
+
+        i += 1
+        while cnt != 0:
+            if self.is_close_paren(tokens[i]):
+                cnt -= 1
+            elif self.is_open_paren(tokens[i]):
+                cnt += 1
+            i += 1
+        return i
+
     def matching_paren(self, tokens, i):
         cnt = 1
         i += 1
@@ -149,10 +163,8 @@ class Stage0:
 
 
     def strip_paren(self, tokens):
-        print "BEFORE",tokens
         while self.canstrip(tokens):
             tokens = tokens[1:-1]
-        print "AFTER ",tokens
         return tokens
 
     def _parse(self, tokens):
@@ -195,13 +207,14 @@ class Stage0:
                 i = self.next_token(tokens, i)
 
             # first thing, find operator-
-            i = len(tokens) - 1 
-            while i >= 0:
+            i = 0 
+            while i < len(tokens):
                 if isinstance(tokens[i], Operator):
                     if tokens[i].operator == '-':
+                        print "UNARYNEG: ", tokens, tokens[i+1:]
                         rhs = self._parse(tokens[i+1:])
                         return ast.UnarySub(rhs)
-                i = self.next_token(tokens, i)
+                i = self.next_token_right(tokens, i)
 
             # first thing, find operator(
             i = len(tokens) - 1 
