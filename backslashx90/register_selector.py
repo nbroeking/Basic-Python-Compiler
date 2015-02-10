@@ -22,6 +22,8 @@ def allocate_registers( asm_tree ):
 
     #Set Names
 
+    return asm_tree
+
 def print_graph(graph_map):
     for key, vals in graph_map.items():
         print ("%s -> %s" % (key, vals))

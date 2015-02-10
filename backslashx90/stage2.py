@@ -6,9 +6,9 @@ from AsmTree import Movl, Addl, Neg, Push#, Pop, Call, Subl
 import core
 import platform
 
-def stage2(ast, fname):
+def stage2(ast):
     st2 = Stage2();
-    st2.assemble(ast);
+    return st2.assemble(ast);
 
 
 class Stage2:
@@ -24,7 +24,7 @@ class Stage2:
         for i in self.AsmTree:
             print ("%s" % i._to_str())
         print "----------------"
-        allocate_registers(self.AsmTree)
+        return allocate_registers(self.AsmTree)
 
     def to_base_asm( self, ast ):
         if isinstance(ast, core.Const):

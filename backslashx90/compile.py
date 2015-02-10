@@ -3,6 +3,7 @@
 # Written By Nicolas Broeking and Josh Rahm
 # Team: x90
 
+import printer
 import compiler.ast as pyast
 import compiler as comp
 import stage1
@@ -49,8 +50,9 @@ def main( argv):
         if outfile.endswith('.py'):
             outfile=outfile[:-3]+".s"
 
-    stage2.stage2(flattened, outfile);
-    
+    tree = stage2.stage2(flattened);
+
+    printer.output(tree, outfile)
 
 if __name__ == "__main__":
     main(sys.argv)
