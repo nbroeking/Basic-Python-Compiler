@@ -40,9 +40,9 @@ def main( argv):
     print ast
 
     flattened = stage1.flatten(ast)
-    # print("\nFlattened:")
-    # for i in flattened:
-    #     print(i._to_str())
+    print("\nFlattened:")
+    for n in flattened:
+        print(n._to_str())
 
     if outfile is None:
         outfile = argv[i]
