@@ -39,17 +39,19 @@ class Stage2:
                 name = ast.name
                 op = ast.rhs
                 if isinstance(op, core.Add):
-                    self.emit( '    movl %s, %%eax' % self.to_base_asm(op.rhs) );
-                    self.emit( '    addl %s, %%eax' % self.to_base_asm(op.lhs) );
-                    self.emit( '    movl %%eax, %s' % self.to_offset(name) )
+                    self.AsmTree.append(Addl(self.to_base_asm(op.rhs), self.to_base_asm(op.lhs)))
+
                 if isinstance(op, core.Neg):
-                    self.emit( '    movl %s, %%eax' % self.to_base_asm(op.rhs) );
-                    self.emit( '    negl %eax' );
-                    self.emit( '    movl %%eax, %s' % self.to_offset(name) )
+                    self.AsmTree.append(Neg(self.to_base_asm(op.rhs)))
+
                 elif isinstance(op, core.Const):
+            
+                    self.AsmTree.append(Movl(self.to_base_asm(op), ))
+                
                     self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.Name):
+
                     self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
                     self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.CallFunc):
