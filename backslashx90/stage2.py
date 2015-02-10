@@ -1,6 +1,7 @@
 # 
 #
 
+from AsmTree import Movl, Addl, Neg, Push#, Pop, Call, Subl
 import core
 import platform
 
@@ -21,9 +22,8 @@ class Stage2:
 
     def assemble(self, ast):
         self.instructionSelection(ast);
-
-    def to_offset( self, var ):
-        return "-%s(%%ebp)" % (var,)
+        for i in self.AsmTree:
+            print ("%s", i._to_str())
 
     def to_base_asm( self, ast ):
         if isinstance(ast, core.Const):
@@ -45,54 +45,15 @@ class Stage2:
                     self.AsmTree.append(Neg(self.to_base_asm(op.rhs)))
 
                 elif isinstance(op, core.Const):
-            
-                    self.AsmTree.append(Movl(self.to_base_asm(op), ))
+                    self.AsmTree.append(Movl(self.to_base_asm(op), name ))
                 
-                    self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
-                    self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.Name):
+                    self.AsmTree.append(Movl(self.to_base_asm(op), name))
 
-                    self.emit( '    movl %s, %%eax' % self.to_base_asm(op) )
-                    self.emit( '    movl %%eax, %s' % self.to_offset(name) )
                 elif isinstance(op, core.CallFunc):
                     for i in op.args:
-                        self.emit( '    push %s' % self.to_base_asm(i) )
-                    if platform.system() == 'Darwin':
-                        self.emit('    call _%s' % self.to_base_asm(op.lhs))
-                    else:
-                        self.emit('    call %s' % self.to_base_asm(op.lhs))
-                    self.emit('    movl %%eax, %s' % self.to_offset(name))
+                        self.AsmTree.append(Push(self.to_base_asm(i)))
 
-            elif isinstance(ast, core.Print):
-                self.emit( '    movl %s, %%eax' % self.to_base_asm(ast.rhs) )
-                self.emit( '    pushl %eax' )
-                if platform.system() == 'Darwin':
-                    self.emit('    call _print_int_nl')
-                else:
-                    self.emit('    call print_int_nl' )
+                    self.AsmTree.append(Push(self.to_base_asm(op.lhs)))
+                    self.AsmTree.append(Movl("%eax", self.to_offset(name)))
 
-    def changeNames(self, ast):
-        self.namenum = 4
-
-        def changeName_(stmt):
-            if isinstance(stmt, core.Name) or isinstance(stmt, core.Assign):
-                if stmt.name in self.nametrans:
-                    stmt.name = self.nametrans[stmt.name]
-                else:
-                    self.nametrans[stmt.name] = self.namenum
-                    stmt.name = self.namenum
-                    self.namenum += 4
-
-            for i in stmt.children:
-                changeName_(i)
-                
-            
-        for i in ast:
-            changeName_(i)
-
-        return self.namenum;
-        
-    def preamble(self):
-        self.emit('    pushl %ebp');
-        self.emit('    movl %esp, %ebp');
-        pass
