@@ -36,8 +36,7 @@ class printer:
 
     def printTree(self, lst):
         for instr in lst:
-            self.emit( instr._to_str())
-        
+            self.emit('    ' + instr._to_str())
     def preamble(self):
         self.emit('    pushl %ebp');
         self.emit('    movl %esp, %ebp');

@@ -2,7 +2,7 @@
 #
 
 from register_selector import allocate_registers
-from AsmTree import Movl, Addl, Neg, Push#, Pop, Call, Subl
+from AsmTree import Movl, Addl, Neg, Push, Pop, Call, Subl
 import core
 import platform
 
@@ -33,6 +33,7 @@ class Stage2:
             if( isinstance(ast.name, int) ):
                 return ast.name
             return ast.name
+        raise WTFException()
 
     def instructionSelection(self, lst):
         for ast in lst:
@@ -45,7 +46,7 @@ class Stage2:
 
                 if isinstance(op, core.Neg):
                     self.AsmTree.append(Movl(self.to_base_asm(op.rhs), name))
-                    self.AsmTree.append(Neg(self.to_base_asm(name)))
+                    self.AsmTree.append(Neg(name))
 
                 elif isinstance(op, core.Const):
                     self.AsmTree.append(Movl(self.to_base_asm(op), name ))
@@ -57,6 +58,12 @@ class Stage2:
                     for i in op.args:
                         self.AsmTree.append(Push(self.to_base_asm(i)))
 
-                    self.AsmTree.append(Push(self.to_base_asm(op.lhs)))
-                    self.AsmTree.append(Movl("%eax", name))
+                    self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
+                    self.AsmTree.append(Movl("%%eax", name))
+
+            elif isinstance(ast, core.Print):
+                self.AsmTree.append(Subl("&4", '%%esp'))
+                self.AsmTree.append(Movl(self.to_base_asm(ast.rhs), '%(%esp)'))
+                self.AsmTree.append(Call("print_int_nl")) 
+                self.AsmTree.append(Addl("&4", "%%esp"))
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-x = 1 + 2 # test
+x = input() + 2 # test
 y = (1 + 2 +-- 3  +-2) + (1 +- 2) +- (1) ######
 
 print x
