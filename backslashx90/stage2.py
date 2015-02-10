@@ -10,40 +10,17 @@ def stage2(ast, fname):
 
 
 class Stage2:
-    def __init__(self, fileName):
-        self.out = open( fileName, 'w' )
+    def __init__(self):
         self.namenum = 0
         self.nametrans = {}
+        self.AsmTree = []
 
     # python -> stage1 -> stage2 -> file
     def emit(self, line):
         self.out.write( line + '\n' );
 
     def assemble(self, ast):
-        self.emit( '.data' );
-        self.emit( '.text' );
-       
-        if platform.system() == 'Darwin':
-            self.emit( '.globl _main')
-            self.emit('_main:')
-        else:
-            self.emit( '.globl main' );
-            self.emit( '.type main, @function' );
-            self.emit( 'main:' );
-        
-        size = self.changeNames(ast);
-        self.preamble()
-        self.emit( '    subl $%s, %%esp' % (size,)  );
-        
-        # print '---'
-        # for i in ast:
-        #     print (i._to_str())
-
         self.instructionSelection(ast);
-
-        self.emit('    movl $0, %eax');
-        self.emit('    leave');
-        self.emit('    ret');
 
     def to_offset( self, var ):
         return "-%s(%%ebp)" % (var,)

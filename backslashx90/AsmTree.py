@@ -56,4 +56,9 @@ class Subl:
     def _to_str(self):
         return "%s -= %s" % (self.lhs, self.rhs)
 
+class Ret:
+    def __init(self):
+        pass
 
+    def _to_str(self):
+        return "ret"
