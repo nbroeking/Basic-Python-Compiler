@@ -5,3 +5,7 @@
 *.swo
 tags
 runTests
+*Store
+*.zip
+*tmp*
+package
