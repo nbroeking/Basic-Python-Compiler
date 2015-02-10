@@ -5,7 +5,6 @@
 
 import compiler.ast as pyast
 import compiler as comp
-import stage0
 import stage1
 import stage2
 import core
@@ -33,12 +32,11 @@ def main( argv):
     if len(argv) < 2:
         print("Usage: python compiler.py <file>")
         sys.exit()
-    #ast = comp.parseFile(argv[i])
     # print("Original: ")
     # print(ast)
     
     sys.stderr.write(open(argv[i],'r').read())
-    ast = stage0.parseFile(argv[i])
+    ast = comp.parseFile(argv[i])
     print ast
 
     flattened = stage1.flatten(ast)
