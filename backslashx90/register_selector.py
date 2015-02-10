@@ -18,6 +18,9 @@ def allocate_registers( asm_tree ):
     colors = color_graph( graph )
     print_graph(colors)
 
+    #Spill Code
+
+    #Set Names
 
 def print_graph(graph_map):
     for key, vals in graph_map.items():
@@ -105,7 +108,3 @@ def build_interference_model( asm_tree ):
                 current_set.add( lhs )
 
         yield current_set.copy()
-
-
-
-
