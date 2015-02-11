@@ -55,15 +55,29 @@ class Stage2:
                     self.AsmTree.append(Movl(self.to_base_asm(op), name))
 
                 elif isinstance(op, core.CallFunc):
-                    for i in op.args:
-                        self.AsmTree.append(Push(self.to_base_asm(i)))
+                    self.AsmTree.append(Subl("&12", "%%esp"))
+                    self.AsmTree.append(Movl("%%eax", "%(%esp)"))
+                    self.AsmTree.append(Movl("%%ecx", "%4(%esp)"))
+                    self.AsmTree.append(Movl("%%edx", "%8(%esp)"))
 
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
                     self.AsmTree.append(Movl("%%eax", name))
 
+                    self.AsmTree.append(Movl("%(%esp)", "%%eax"))
+                    self.AsmTree.append(Movl("%4(%esp)", "%%ecx"))
+                    self.AsmTree.append(Movl("%8(%esp)", "%%edx"))
+                    self.AsmTree.append(Addl("&12", "%%esp"))
+
             elif isinstance(ast, core.Print):
-                self.AsmTree.append(Subl("&4", '%%esp'))
-                self.AsmTree.append(Movl(self.to_base_asm(ast.rhs), '%(%esp)'))
+                self.AsmTree.append(Subl("&12", "%%esp"))
+                self.AsmTree.append(Movl("%%eax", "%(%esp)"))
+                self.AsmTree.append(Movl("%%ecx", "%4(%esp)"))
+                self.AsmTree.append(Movl("%%edx", "%8(%esp)"))
+                self.AsmTree.append(Push(self.to_base_asm(ast.rhs)))
+                # self.AsmTree.append(Movl(self.to_base_asm(ast.rhs), '%(%esp)'))
                 self.AsmTree.append(Call("print_int_nl")) 
-                self.AsmTree.append(Addl("&4", "%%esp"))
+                self.AsmTree.append(Movl("%4(%esp)", "%%eax"))
+                self.AsmTree.append(Movl("%8(%esp)", "%%ecx"))
+                self.AsmTree.append(Movl("%12(%esp)", "%%edx"))
+                self.AsmTree.append(Addl("&16", "%%esp"))
 

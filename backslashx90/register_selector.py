@@ -4,8 +4,9 @@ REG_MAP = { 0: "%eax", 1: "%ebx", 2: "%ecx", 3: "%edx",
             4: "%edi", 5: "%esi" }
 NREG = 6
 
+# return (tree, nstackvars)
 def allocate_registers( asm_tree ):
-    # edge_list : [[string]]
+    # edge_list : [[strilng]]
     sets = list(build_interference_model( asm_tree ))
     sets.reverse()
     sets = zip(asm_tree, sets[1:])
@@ -18,7 +19,7 @@ def allocate_registers( asm_tree ):
     print_graph(graph)
     print "----------------"
 
-    colors = color_graph( graph )
+    (colors, n_stack_vars) = color_graph( graph )
     print_graph(colors)
 
     # returns None if pass
@@ -39,8 +40,7 @@ def allocate_registers( asm_tree ):
         for i in asm_tree:
             print i
 
-
-    return asm_tree
+    return [Subl("$%s" % ((n_stack_vars+2)*4), "%esp")] + asm_tree
 
 def get_mapping( color ):
     if color < NREG:
@@ -136,7 +136,8 @@ def build_graph( sets ):
             t = instr.dest
             s = instr.src
 
-            ret_map[t] = set()
+            if not t in ret_map:
+                ret_map[t] = set()
             for v in l_after:
                 if v != t: # and v != s:
                     add_interfere( ret_map, v, t )
@@ -146,17 +147,37 @@ def build_graph( sets ):
             t = instr.rhs
             s = instr.lhs
 
-            ret_map[t] = set()
+            if not t in ret_map:
+                ret_map[t] = set()
             for v in l_after:
                 if v != t:
                     add_interfere( ret_map, v, t )
+
+        if isinstance( instr, Neg ):
+            t = instr.val
+            if not t in ret_map:
+                ret_map[t] = set()
+            for v in l_after:
+                if v != t:
+                    add_interfere( ret_map, v, t )
+
+        if isinstance( instr, Push ):
+            t = instr.val
+            if not t in ret_map:
+                ret_map[t] = set()
+            for v in l_after:
+                if v != t:
+                    add_interfere( ret_map, v, t )
+
     return ret_map
 
 
 #color the graph
-#map(string -> int)
+#(map(string -> int), nvars)
 def color_graph( mapping):
     ret_map = dict()
+
+    maxret = 0
 
     for node in mapping:
         # priority given to nodes with a ^ (must be a register)
@@ -169,6 +190,7 @@ def color_graph( mapping):
                     possible.remove( ret_map[neighbor] )
     
             ret_map[node] = min(possible)
+            maxret = max( maxret, ret_map[node] )
 
     for node in mapping:
         if not node.startswith("^"):
@@ -180,8 +202,11 @@ def color_graph( mapping):
                     possible.remove( ret_map[neighbor] )
     
             ret_map[node] = min(possible)
+            maxret = max( maxret, ret_map[node] )
 
-    return ret_map
+    maxret -= NREG
+    maxret = maxret if maxret > 0 else 0
+    return (ret_map, maxret)
 
 def is_var(name):
     return len(name) > 0 and name[0] != '&' and name[0] != '%'
@@ -214,6 +239,11 @@ def build_interference_model( asm_tree ):
                 current_set.add( lhs )
 
         elif isinstance( instr, Neg ):
+            rhs = instr.val
+            if is_var(rhs):
+                current_set.add( rhs )
+
+        elif isinstance( instr, Push ):
             rhs = instr.val
             if is_var(rhs):
                 current_set.add( rhs )
