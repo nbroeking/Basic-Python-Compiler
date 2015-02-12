@@ -2,10 +2,14 @@ from AsmTree import Movl, Addl, Neg, Push, Pop, Call, Subl
 
 REG_MAP = { 0: "%eax", 1: "%ebx", 2: "%ecx", 3: "%edx",
             4: "%edi", 5: "%esi" }
+CALLER_REGISTERS = set( [0, 2, 3] )
 NREG = 6
 
 # return (tree, nstackvars)
 def allocate_registers( asm_tree ):
+    print "----------------"
+    for i in asm_tree:
+        print i
     # edge_list : [[strilng]]
     sets = list(build_interference_model( asm_tree ))
     sets.reverse()
@@ -69,8 +73,9 @@ def remove_trivial( asm_tree ):
 def is_register( color ):
     return color < NREG
 
+current_temp = 0 # temp counter
 def pass_spill( asm_tree, colors ):
-    current_temp = 0 # temp counter
+    global current_temp
     did_spill = False
 
     ret_list = []
@@ -83,15 +88,15 @@ def pass_spill( asm_tree, colors ):
                 if not (is_register(s_slot) or is_register(d_slot)): 
                     t_slot = "^%d" % current_temp
                     current_temp += 1
-                    ret_list.append( Movl(s_slot, t_slot) )
-                    ret_list.append( Movl(t_slot, d_slot) )
+                    ret_list.append( Movl(s, t_slot) )
+                    ret_list.append( Movl(t_slot, d) )
                     did_spill = True
                 else:
                     ret_list.append( instr )
             else:
                 ret_list.append( instr )
 
-        if isinstance( instr, Addl ):
+        elif isinstance( instr, Addl ):
             s, d = instr.lhs, instr.rhs;
             if is_var(s) and is_var(d):
                 s_slot, d_slot = colors[s], colors[d]
@@ -99,13 +104,16 @@ def pass_spill( asm_tree, colors ):
                 if not (is_register(s_slot) or is_register(d_slot)): 
                     t_slot = "^%d" % current_temp
                     current_temp += 1
-                    ret_list.append( Movl(s_slot, t_slot) )
-                    ret_list.append( Addl(t_slot, d_slot) )
+                    ret_list.append( Movl(s, t_slot) )
+                    ret_list.append( Addl(t_slot, d) )
                     did_spill = True
                 else:
                     ret_list.append( instr )
             else:
                 ret_list.append( instr )
+
+        else:
+            ret_list.append(instr)
 
     if did_spill:
         return ret_list
@@ -193,7 +201,20 @@ def color_graph( mapping):
             maxret = max( maxret, ret_map[node] )
 
     for node in mapping:
-        if not node.startswith("^"):
+        # these nodes cannot be given to a caller register
+        if node.startswith("*"):
+            neighbors = mapping[node] # set
+            possible = set(range(len(neighbors) + 4)) - CALLER_REGISTERS # possible registers
+    
+            for neighbor in neighbors:
+                if neighbor in ret_map and ret_map[neighbor] in possible:
+                    possible.remove( ret_map[neighbor] )
+    
+            ret_map[node] = min(possible)
+            maxret = max( maxret, ret_map[node] )
+
+    for node in mapping:
+        if not node.startswith("^") and not node.startswith("*"):
             neighbors = mapping[node] # set
             possible = set(range(len(neighbors) + 1)) # possible registers
     

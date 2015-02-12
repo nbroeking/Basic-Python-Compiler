@@ -67,7 +67,7 @@ class Stage1:
 
         # args are flat for sure
         
-        var = self.tmpvar()
+        var = '*' + self.tmpvar()
         self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
         return var
         
