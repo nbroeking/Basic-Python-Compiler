@@ -6,9 +6,9 @@
 import printer
 import compiler.ast as pyast
 import compiler as comp
-import stage1
-import stage2
-import core
+import stage1 as flat
+import stage2 as reg
+import viper.core as core
 import sys
 
 def main( argv):
@@ -18,6 +18,7 @@ def main( argv):
 
     i = 1
 
+#Set debug mode if debug mode is flagged
     while argv[i].startswith('-'):
         if argv[i] == '-o':
             outfile = argv[i+1]
@@ -29,29 +30,31 @@ def main( argv):
     if not debug:
         sys.stdout = sys.stderr # open('/dev/null', 'w')
             
-
+#Check arguments
     if len(argv) < 2:
         print("Usage: python compiler.py <file>")
         sys.exit()
-    # print("Original: ")
-    # print(ast)
-    
+
+#If in debug write all stdout to stderr
     sys.stderr.write(open(argv[i],'r').read())
     ast = comp.parseFile(argv[i])
     print ast
 
-    flattened = stage1.flatten(ast)
-    print("\nFlattened:")
-    for n in flattened:
-        print(n._to_str())
-
+#Get the outfile from arguments
     if outfile is None:
         outfile = argv[i]
         if outfile.endswith('.py'):
             outfile=outfile[:-3]+".s"
 
-    tree = stage2.stage2(flattened);
+#Flatten
+    flattened = flat.flatten(ast)
+    for n in flattened:
+        print(n._to_str())
 
+#Register Allocation
+    tree = reg.selection(flattened);
+
+#Print the ASM tree to a file
     printer.output(tree, outfile)
 
 if __name__ == "__main__":

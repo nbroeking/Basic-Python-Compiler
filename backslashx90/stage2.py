@@ -1,83 +1,93 @@
-# 
+# Create the Asm Tree and then do register selection 
 #
+#
+from viper.register_selector import allocate_registers
+from viper.AsmTree import Movl, Addl, Neg, Push,  Call, Subl
+import viper.core as core
+from viper.AsmTypes import SPILL, CALLER_SAVED, RAW, CONSTANT, AsmVar
 
-from register_selector import allocate_registers
-from AsmTree import Movl, Addl, Neg, Push, Pop, Call, Subl
-import core
-import platform
-
-def stage2(ast):
+#Perform Register Selection
+def selection(ast):
     st2 = Stage2();
     return st2.assemble(ast);
 
-
+#The Register Selection Object
 class Stage2:
     def __init__(self):
         self.namenum = 0
         self.nametrans = {}
         self.AsmTree = []
 
-
+#Create the Asm tree and then Allocate Registers
     def assemble(self, ast):
         self.instructionSelection(ast);
-        print "----------------"
         for i in self.AsmTree:
             print ("%s" % i._to_str())
-        print "----------------"
         return allocate_registers(self.AsmTree)
 
-    def to_base_asm( self, ast ):
+#Convert base to AsmVar
+    def to_base_asm( self, ast ): # -> AsmVar
         if isinstance(ast, core.Const):
-            return "&%s" % (ast.raw,) 
+            return AsmVar(ast.raw, CONSTANT)
         elif isinstance(ast, core.Name):
             if( isinstance(ast.name, int) ):
-                return ast.name
-            return ast.name
+                return AsmVar(str(ast.name), CONSTANT)
+            return AsmVar(ast.name)
         raise WTFException()
 
+#Select Instructions
     def instructionSelection(self, lst):
         for ast in lst:
             if isinstance(ast, core.Assign):
                 name = ast.name
                 op = ast.rhs
                 if isinstance(op, core.Add):
-                    self.AsmTree.append(Movl(self.to_base_asm(op.lhs), name))
-                    self.AsmTree.append(Addl(self.to_base_asm(op.rhs), name))
+                    self.AsmTree.append(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
+                    self.AsmTree.append(Addl(self.to_base_asm(op.rhs), AsmVar(name)))
 
                 if isinstance(op, core.Neg):
-                    self.AsmTree.append(Movl(self.to_base_asm(op.rhs), name))
-                    self.AsmTree.append(Neg(name))
+                    self.AsmTree.append(Movl(self.to_base_asm(op.rhs), AsmVar( name )))
+                    self.AsmTree.append(Neg(AsmVar( name )))
 
                 elif isinstance(op, core.Const):
-                    self.AsmTree.append(Movl(self.to_base_asm(op), name ))
+                    self.AsmTree.append(Movl(self.to_base_asm(op), AsmVar( name ) ))
                 
                 elif isinstance(op, core.Name):
-                    self.AsmTree.append(Movl(self.to_base_asm(op), name))
+                    self.AsmTree.append(Movl(self.to_base_asm(op), AsmVar( name )))
 
                 elif isinstance(op, core.CallFunc):
-                    self.AsmTree.append(Subl("&12", "%%esp"))
-                    self.AsmTree.append(Movl("%%eax", "%(%esp)"))
-                    self.AsmTree.append(Movl("%%ecx", "%4(%esp)"))
-                    self.AsmTree.append(Movl("%%edx", "%8(%esp)"))
+                    self.AsmTree.append(Subl(AsmVar("12", CONSTANT), AsmVar("%esp", RAW)))
+                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar("(%esp)" , RAW)))
+                    self.AsmTree.append(Movl(AsmVar("%ecx", RAW), AsmVar("4(%esp)", RAW)))
+                    self.AsmTree.append(Movl(AsmVar("%edx", RAW), AsmVar("8(%esp)", RAW)))
 
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
-                    self.AsmTree.append(Movl("%%eax", name))
+                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name)))
 
-                    self.AsmTree.append(Movl("%(%esp)", "%%eax"))
-                    self.AsmTree.append(Movl("%4(%esp)", "%%ecx"))
-                    self.AsmTree.append(Movl("%8(%esp)", "%%edx"))
-                    self.AsmTree.append(Addl("&12", "%%esp"))
+                    self.AsmTree.append(Movl(AsmVar("(%esp)", RAW), AsmVar("%eax", RAW)))
+                    self.AsmTree.append(Movl(AsmVar("4(%esp)", RAW),AsmVar("%ecx", RAW)))
+                    self.AsmTree.append(Movl(AsmVar("8(%esp)", RAW),AsmVar("%edx", RAW)))
+                    self.AsmTree.append(Addl(AsmVar("12", CONSTANT),AsmVar("%esp", RAW)))
 
             elif isinstance(ast, core.Print):
-                self.AsmTree.append(Subl("&12", "%%esp"))
-                self.AsmTree.append(Movl("%%eax", "%(%esp)"))
-                self.AsmTree.append(Movl("%%ecx", "%4(%esp)"))
-                self.AsmTree.append(Movl("%%edx", "%8(%esp)"))
+                self.AsmTree.append(Subl(
+                    AsmVar("12", CONSTANT), AsmVar("%esp", RAW)))
+                self.AsmTree.append(Movl(
+                    AsmVar("%eax", RAW), AsmVar("(%esp)", RAW) ))
+                self.AsmTree.append(Movl(
+                    AsmVar("%ecx", RAW), AsmVar("4(%esp)", RAW)))
+                self.AsmTree.append(Movl(
+                    AsmVar("%edx", RAW), AsmVar("8(%esp)", RAW)))
                 self.AsmTree.append(Push(self.to_base_asm(ast.rhs)))
                 # self.AsmTree.append(Movl(self.to_base_asm(ast.rhs), '%(%esp)'))
-                self.AsmTree.append(Call("print_int_nl")) 
-                self.AsmTree.append(Movl("%4(%esp)", "%%eax"))
-                self.AsmTree.append(Movl("%8(%esp)", "%%ecx"))
-                self.AsmTree.append(Movl("%12(%esp)", "%%edx"))
-                self.AsmTree.append(Addl("&16", "%%esp"))
+                self.AsmTree.append(Call(AsmVar("print_int_nl", RAW))) 
+                self.AsmTree.append(Movl(
+                    AsmVar("4(%esp)", RAW), AsmVar("%eax", RAW)))
+
+                self.AsmTree.append(Movl(
+                    AsmVar("8(%esp)", RAW), AsmVar("%ecx", RAW)))
+                self.AsmTree.append(Movl(
+                    AsmVar("12(%esp)", RAW), AsmVar("%edx", RAW)))
+                self.AsmTree.append(Addl(
+                    AsmVar("16", CONSTANT), AsmVar("%esp", RAW)))
 

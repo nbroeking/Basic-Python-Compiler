@@ -3,31 +3,33 @@
 # the current project.
 
 import compiler.ast as pyast
-import core
+import viper.core as core
 
 # Detect if the node is the base case
 def is_base(pyst):
     return isinstance(pyst, pyast.Const) or \
            isinstance(pyst, pyast.Name)
 
-
+#Convert Base Class to Value
 def base_cov(pyst):
     if isinstance(pyst, pyast.Const):
         return core.Const(pyst.getChildren()[0])
     if isinstance(pyst, pyast.Name):
         return core.Name(pyst.getChildren()[0])
 
-
+#Flattener Class
 class Stage1:
     def __init__(self):
         self.tempcount = 0
         self.buffer = []
 
+#Create Temporary name
     def tmpvar(self):
         tmp = "$%d$" % self.tempcount
         self.tempcount += 1
         return tmp
 
+#Translate Base
     def trans(self, pyst, lhs, rhs):
         return \
             { pyast.Add: core.Add,
@@ -35,6 +37,7 @@ class Stage1:
               pyast.Mul: core.Mul
             }[pyst.__class__](lhs, rhs)
 
+#Flatten an operation
     def loose_flatten_op(self, pyst):
         lhs, rhs = pyst.asList()
         lhs_, rhs_ = base_cov(lhs), base_cov(rhs)
@@ -101,6 +104,7 @@ class Stage1:
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
 
+#Flatten Assignment
     def flatten_assign(self, pyst):
         if isinstance(pyst, pyast.Assign):
             # if instance of assign, flatten the rhs
@@ -119,6 +123,7 @@ class Stage1:
         else:
             raise Exception("Expected an Assign instance")
 
+#Flatten Print
     def flatten_print(self, pyst):
         if isinstance(pyst, pyast.Printnl):
             var = self.loose_flatten(pyst.getChildren()[0]);
@@ -133,7 +138,7 @@ class Stage1:
         else:
             raise Exception("Expected an Printnl instance")
 
-
+#Flatten the tree
     def flatten(self, pyst):
         if isinstance(pyst, pyast.Assign):
             self.flatten_assign(pyst)
@@ -178,5 +183,6 @@ def flatten(ast):
     sg1 = Stage1()
     return sg1.flatten(ast)
 
+#print the flatten ast
 def print_core_ast( core ): # core : [AST]
     return "\n".join([i._to_str() for i in core])

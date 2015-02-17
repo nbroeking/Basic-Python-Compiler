@@ -1,8 +1,5 @@
 # Instruction Selection
 #
-import core
-import platform
-
 def output(ast, fname):
     Print = printer(fname);
     Print.output(ast);
