@@ -9,6 +9,9 @@ class AsmVar:
         self.name = name
         self.mask = mask
 
+    def __eq__(self, other):
+        return self.name == other.name
+
     def setCantSpill(self, spill = True):
         self.mask |= spill
     

@@ -1,3 +1,5 @@
+#This class Allocates Registers
+
 from AsmTree import Movl, Addl, Neg, Push, Pop, Call, Subl
 from viper.AsmTypes import SPILL, CALLER_SAVED, RAW, CONSTANT, AsmVar
 
@@ -15,19 +17,66 @@ def allocate_registers( asm_tree ):
     sets.reverse()
     sets = zip(asm_tree, sets[1:])
 
-#Build the Color Graph
-    graph = alloc.build_graph( sets );
-    (colors, n_stack_vars) = alloc.color_graph( graph )
-    alloc.print_graph(colors)
+    print "------------- Liveness"
+    for x in sets:
+        print x
 
+    print "-------------"
+   
+    #Build the Color Graph
+    graph = alloc.build_graph( sets );
+
+    print "\n-----------INTERFERENCE--------------"
+    for x in graph:
+        print "\n", x, "-> ", 
+        for y in graph[x]:
+            print y, " ",
+    print "--------------"
+
+    (colors, n_stack_vars) = alloc.color_graph( graph )
+
+    print "\n---------- Edge Detection"
+    alloc.print_graph(colors)
+    print "------------\n"
+
+
+    print "------------ ASM BEFORE SPILLING"
+    for x in asm_tree:
+        print x
+
+    print "--------------\n"
     # returns None if pass
     # If there was a spill then generate spill code
     new_asm = alloc.pass_spill( asm_tree, colors )
+
+    print "----------- Asm After Spilling"
+    if new_asm:
+        print "Spilled our code"
+    else:
+        print "We did not spill"
+    print "------------\n"
     if new_asm:
         return allocate_registers( new_asm )
     else:
+        print "---- Before Simple Sub ---"
+        for x in asm_tree:
+            print x
+        print"----\n"
+
+    #NOTE: BUG IS RIGHT HERE
         alloc.simple_sub(asm_tree, colors)
+        print "-----After Simple Sub---"
+        for y in asm_tree:
+            print y
+        print "--------\n"
+
+        print "------COLORS AFTER SIMPLE SUB---"
+        for x in colors:
+            print x, " = ", colors[x]
+    
+        print "--------\n\n"
         asm_tree = list(alloc.remove_trivial(asm_tree))
+
 
     return [Subl(AsmVar("%s" % ((n_stack_vars+2)*4), CONSTANT), AsmVar("%esp", RAW))] + asm_tree
 
@@ -46,7 +95,7 @@ class Allocation:
         if var.isRaw(): # constant
             return var
         else:
-            return AsmVar(self.get_mapping( colors[var] ), var.mask)
+            return AsmVar(self.get_mapping( colors[var] ) + "", var.mask)
     
     def simple_sub( self, asm_tree, colors ):
         for instr in asm_tree:
@@ -63,18 +112,21 @@ class Allocation:
         return color < NREG
     
     def pass_spill( self, asm_tree, colors ):
-        global current_temp
         did_spill = False
-    
+   
+        print "=======SPILLED======" 
         ret_list = []
         for instr in asm_tree:
             if isinstance( instr, Movl ):
+                print "===MOVL==="
                 s, d = instr.src, instr.dest;
                 if self.is_var(s) and self.is_var(d):
+                    print "===isvars===", "s = ", s , " d = ", d
                     s_slot, d_slot = colors[s], colors[d]
                     # check for a spill
                     if not (self.is_register(s_slot) or self.is_register(d_slot)): 
-                        t_slot = "^%d" % self.current_temp
+                        print "==IN REGES=="
+                        t_slot = AsmVar("%d" % self.current_temp, SPILL )
                         self.current_temp += 1
                         ret_list.append( Movl(s, t_slot) )
                         ret_list.append( Movl(t_slot, d) )
@@ -90,7 +142,7 @@ class Allocation:
                     s_slot, d_slot = colors[s], colors[d]
                     # check for a spill
                     if not (self.is_register(s_slot) or self.is_register(d_slot)): 
-                        t_slot = "^%d" % self.current_temp
+                        t_slot = AsmVar("%d" % self.current_temp, SPILL)
                         self.current_temp += 1
                         ret_list.append( Movl(s, t_slot) )
                         ret_list.append( Addl(t_slot, d) )

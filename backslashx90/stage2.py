@@ -21,8 +21,11 @@ class Stage2:
 #Create the Asm tree and then Allocate Registers
     def assemble(self, ast):
         self.instructionSelection(ast);
+        print "-------- ASM TREE BEFORE REG"
         for i in self.AsmTree:
             print ("%s" % i._to_str())
+        print "-------"
+        print "\n"
         return allocate_registers(self.AsmTree)
 
 #Convert base to AsmVar
