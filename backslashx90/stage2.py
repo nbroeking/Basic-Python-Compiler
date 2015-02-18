@@ -65,7 +65,7 @@ class Stage2:
                     self.AsmTree.append(Movl(AsmVar("%edx", RAW), AsmVar("8(%esp)", RAW)))
 
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
-                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name)))
+                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED))) #NOTE:This variable was marked as * 
 
                     self.AsmTree.append(Movl(AsmVar("(%esp)", RAW), AsmVar("%eax", RAW)))
                     self.AsmTree.append(Movl(AsmVar("4(%esp)", RAW),AsmVar("%ecx", RAW)))

@@ -254,7 +254,7 @@ class Allocation:
                 maxret = max( maxret, ret_map[node] )
     
         for node in mapping:
-            if node.isNormal():
+            if not node.cantSpill() and not node.isCallerSaved():
                 neighbors = mapping[node] # set
                 possible = set(range(len(neighbors) + 1)) # possible registers
         
