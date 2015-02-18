@@ -8,6 +8,7 @@ REG_MAP = { 0: "%eax", 1: "%ebx", 2: "%ecx", 3: "%edx",
 CALLER_REGISTERS = set( [0, 2, 3] )
 NREG = 6
 
+# Allocate Registers
 # return (tree, nstackvars)
 def allocate_registers( asm_tree ):
     #Build the interference model
@@ -63,7 +64,6 @@ def allocate_registers( asm_tree ):
             print x
         print"----\n"
 
-    #NOTE: BUG IS RIGHT HERE
         alloc.simple_sub(asm_tree, colors)
         print "-----After Simple Sub---"
         for y in asm_tree:
@@ -80,15 +80,18 @@ def allocate_registers( asm_tree ):
 
     return [Subl(AsmVar("%s" % ((n_stack_vars+2)*4), CONSTANT), AsmVar("%esp", RAW))] + asm_tree
 
+#The Allocation class provides all register allocation functionality
 class Allocation:
     def __init__(self):
         self.current_temp = 0
 
+    #Returns the mapping for variables to colors
     def get_mapping( self, color ):
         if color < NREG:
             return REG_MAP[color]
         return "-%d(%%ebp)" % ((color - NREG + 1)*4)
     
+    #Turns the Var into a asm
     def to_asm( self, var, colors ):
         if var.isConstant(): # constant
             return var
@@ -96,36 +99,35 @@ class Allocation:
             return var
         else:
             return AsmVar(self.get_mapping( colors[var] ) + "", var.mask)
-    
+
+    #changes all variable names
     def simple_sub( self, asm_tree, colors ):
         for instr in asm_tree:
             instr.map_vars(lambda s: self.to_asm(s, colors))
-    
+
+    #Remove trivial instructions
     def remove_trivial( self, asm_tree ):
         for instr in asm_tree:
             if not (isinstance(instr, Movl) and
                     instr.src.getName() == instr.dest.getName()):
                     yield instr
     
-    
+    #Checks if the color is a register
     def is_register( self, color ):
         return color < NREG
     
+    #Runs the spill code generator
     def pass_spill( self, asm_tree, colors ):
         did_spill = False
    
-        print "=======SPILLED======" 
         ret_list = []
         for instr in asm_tree:
             if isinstance( instr, Movl ):
-                print "===MOVL==="
                 s, d = instr.src, instr.dest;
                 if self.is_var(s) and self.is_var(d):
-                    print "===isvars===", "s = ", s , " d = ", d
                     s_slot, d_slot = colors[s], colors[d]
                     # check for a spill
                     if not (self.is_register(s_slot) or self.is_register(d_slot)): 
-                        print "==IN REGES=="
                         t_slot = AsmVar("%d" % self.current_temp, SPILL )
                         self.current_temp += 1
                         ret_list.append( Movl(s, t_slot) )
@@ -160,11 +162,12 @@ class Allocation:
         else:
             return None
                 
-    
+    #Print the color graph 
     def print_graph( self, graph_map):
         for key, vals in graph_map.items():
             print ("%s -> %s" % (key, vals))
     
+    #Add an edge to the mapping
     def add_interfere( self, mapping, t, v ):
         if t not in mapping:
             mapping[t] = set()
@@ -174,7 +177,7 @@ class Allocation:
         mapping[v].add(t)
     
     
-    #interference graph
+    #Builds the interference Graph
     # returns map (string -> set(string))
     def build_graph( self, sets ):
         ret_map = dict()
@@ -220,7 +223,7 @@ class Allocation:
         return ret_map
     
     
-    #color the graph
+    #color the Interference Graph
     #(map(string -> int), nvars)
     def color_graph( self, mapping):
         ret_map = dict()
@@ -269,10 +272,11 @@ class Allocation:
         maxret = maxret if maxret > 0 else 0
         return (ret_map, maxret)
     
+    #Checks if it is a variable that can cause interference
     def is_var( self, name):
         return not name.isRaw() and not name.isConstant()
 
-    #liveness analysis
+    #Create a list of live variables after each instuction
     def build_interference_model( self, asm_tree ):
         reverse_asm_tree = asm_tree[:]
         reverse_asm_tree.reverse()
