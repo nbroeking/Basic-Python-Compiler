@@ -271,7 +271,7 @@ class Allocation:
     
     def is_var( self, name):
         return not name.isRaw() and not name.isConstant()
-    
+
     #liveness analysis
     def build_interference_model( self, asm_tree ):
         reverse_asm_tree = asm_tree[:]

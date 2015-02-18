@@ -68,9 +68,8 @@ class Stage1:
                 argsp = args[0:i] + (pyast.Name(var),) + args[i+1:]
                 return self.loose_flatten(pyast.CallFunc(lhs, argsp, None, None))
 
-        # args are flat for sure
-        
-        var = '*' + self.tmpvar()
+        # args are flat for sure 
+        var = self.tmpvar()
         self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
         return var
         
