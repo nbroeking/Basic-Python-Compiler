@@ -22,6 +22,73 @@ class Movl:
 
     def _to_str(self):
         return "movl %s, %s" % (self.src, self.dest)
+#Add
+class Label:
+    def __init__(self, name):
+        if not isinstance(name, str):
+            raise Exception()
+
+        self.name = name
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        pass
+
+    def _to_str(self):
+        return "%s:" % (self.name)
+
+#Add
+class Jmp:
+    def __init__(self, name):
+        if not isinstance(name, str):
+            raise Exception()
+
+        self.name = name
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        pass
+
+    def _to_str(self):
+        return "jmp %s" % (self.name)
+
+#Add
+class Jz:
+    def __init__(self, name):
+        if not isinstance(name, str):
+            raise Exception()
+
+        self.name = name
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        pass
+
+    def _to_str(self):
+        return "jz %s" % (self.name)
+
+#Add
+class Jnz:
+    def __init__(self, name):
+        if not isinstance(name, str):
+            raise Exception()
+
+        self.name = name
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        pass
+
+    def _to_str(self):
+        return "jnz %s" % (self.name)
 
 #Add
 class Addl:
@@ -41,6 +108,26 @@ class Addl:
 
     def _to_str(self):
         return "addl %s, %s" % (self.lhs, self.rhs)
+
+#Add
+class Andl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "andl %s, %s" % (self.lhs, self.rhs)
+
 #Neg 
 class Neg:
     def __init__(self, value):
@@ -56,6 +143,24 @@ class Neg:
 
     def map_vars(self, f): # apply function to all vars
         self.val = f(self.val)
+
+class Testl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) and not isinstance(rhs, AsmVar):
+            raise Exception()
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+    
+    def _to_str(self):
+        return "testl %s, %s " % ( self.lhs, self.rhs )
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
 #Push
 class Push:
     def __init__(self, value):

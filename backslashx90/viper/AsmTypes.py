@@ -1,15 +1,19 @@
 import viper.core as core
 
-SPILL = 0b1
+SPILL        = 0b1
 CALLER_SAVED = 0b10
-RAW = 0b100
-CONSTANT = 0b1000
+RAW          = 0b100
+CONSTANT     = 0b1000
+MEMORY       = 0b10000
 
 def var_const( name ):
     return AsmVar( name, CONSTANT )
 
-def var_raw( name ):
-    return AsmVar( name, RAW )
+def var_raw( name, flags=0 ):
+    return AsmVar( name, RAW | flags )
+
+def var_raw_mem(name):
+    return var_raw(name, MEMORY)
 
 def var_caller_saved( name ):
     return AsmVar( name, CALLER_SAVED )
@@ -66,6 +70,9 @@ class AsmVar:
 
     def isRaw(self):
         return self.mask & RAW
+
+    def isMemory(self):
+        return self.mask & MEMORY
 
     def isConstant(self):
         return self.mask & CONSTANT

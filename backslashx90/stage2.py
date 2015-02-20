@@ -2,7 +2,7 @@
 #
 #
 from viper.register_selector import allocate_registers
-from viper.AsmTree import Movl, Addl, Neg, Push,  Call, Subl, Pop
+from viper.AsmTree import *
 import viper.core as core
 from viper.AsmTypes import *
 
@@ -15,8 +15,19 @@ def selection(ast):
 class Stage2:
     def __init__(self):
         self.namenum = 0
+        self.labelnum = 0
         self.nametrans = {}
         self.AsmTree = []
+    
+    def tmpvar(self):
+        ret = "$s2_%d" % self.namenum
+        self.namenum += 1
+        return ret
+
+    def newlabel(self):
+        ret = ".L%d" % self.labelnum
+        self.labelnum += 1
+        return ret
 
 #Create the Asm tree and then Allocate Registers
     def assemble(self, ast):
@@ -44,14 +55,14 @@ class Stage2:
 
     def save_registers( self, amt=12 ):
         self.addAsm( Subl( var_const(str(amt)), var_raw("%esp")) )
-        self.addAsm( Movl( var_raw("%eax"), var_raw("0x%x(%%esp)" % (amt-12))) )
-        self.addAsm( Movl( var_raw("%ecx"), var_raw("0x%x(%%esp)" % (amt- 8))) )
-        self.addAsm( Movl( var_raw("%edx"), var_raw("0x%x(%%esp)" % (amt- 4))) )
+        self.addAsm( Movl( var_raw("%eax"), var_raw_mem("0x%x(%%esp)" % (amt-12))) )
+        self.addAsm( Movl( var_raw("%ecx"), var_raw_mem("0x%x(%%esp)" % (amt- 8))) )
+        self.addAsm( Movl( var_raw("%edx"), var_raw_mem("0x%x(%%esp)" % (amt- 4))) )
 
     def restore_registers( self, amt=12 ):
-        self.addAsm( Movl( var_raw("0x%x(%%esp)" % (amt-12)), var_raw("%eax") ))
-        self.addAsm( Movl( var_raw("0x%x(%%esp)" % (amt- 8)), var_raw("%ecx") ))
-        self.addAsm( Movl( var_raw("0x%x(%%esp)" % (amt- 4)), var_raw("%edx") ))
+        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt-12)), var_raw("%eax") ))
+        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt- 8)), var_raw("%ecx") ))
+        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt- 4)), var_raw("%edx") ))
         self.addAsm( Addl( var_const(str(amt)), var_raw("%esp")) )
         
 
@@ -66,7 +77,7 @@ class Stage2:
                     self.save_registers()
 
                     self.addAsm( Subl( var_const("4"), var_raw("%esp") ) )
-                    self.addAsm( Movl( var_const(str(len(op.elems))), var_raw("(%esp)") ) )
+                    self.addAsm( Movl( var_const(str(len(op.elems))), var_raw_mem("(%esp)") ) )
                     self.addAsm( Call("create_list") )
                     self.addAsm( Movl( var_raw("%eax"), var_caller_saved(name) ) )
                     self.addAsm( Addl( var_const("4"), var_raw("%esp") ) )
@@ -79,7 +90,7 @@ class Stage2:
 
                     i = 0
                     for elem in op.elems:
-                        self.addAsm( Movl( self.to_base_asm(elem, CALLER_SAVED), var_raw("0x%x(%%eax)" % i) ) )
+                        self.addAsm( Movl( self.to_base_asm(elem, CALLER_SAVED), var_raw_mem("0x%x(%%eax)" % i) ) )
                         i += 4
 
                     self.addAsm( Pop( var_raw("%eax") ))
@@ -88,8 +99,34 @@ class Stage2:
                     self.AsmTree.append(Movl(AsmVar(op.arg, 0, op.offset), AsmVar(name)))
                     
                 elif isinstance(op, core.PyAdd):
-                    self.AsmTree.append(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
-                    self.AsmTree.append(Addl(self.to_base_asm(op.rhs), AsmVar(name)))
+                    v = self.tmpvar()
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
+                    self.addAsm(Movl(self.to_base_asm(op.rhs), AsmVar(v)))
+
+                    self.addAsm(Andl(var_const("3"), AsmVar(v)))
+                    self.addAsm(Andl(AsmVar(v), AsmVar(name)))
+                    
+                    to_label = self.newlabel()
+                    end_label = self.newlabel()
+                    self.addAsm(Jnz("puke"))
+                    self.addAsm(Testl(AsmVar(v), AsmVar(v)))
+                    self.addAsm(Jnz(to_label))
+
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
+                    self.addAsm(Addl(self.to_base_asm(op.rhs), AsmVar(name)))
+                    self.addAsm(Jmp(end_label))
+
+                    self.addAsm(Label(to_label))
+                    self.save_registers(20)
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)")))
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("-4(%esp)")))
+                    self.addAsm(Call("add"))
+                    self.addAsm(Movl(var_raw("%eax"), AsmVar(name)))
+                    self.restore_registers(20)
+                    self.addAsm(Label(end_label))
+
+
+
                     
                 elif isinstance(op, core.Add):
                     self.AsmTree.append(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
@@ -113,7 +150,7 @@ class Stage2:
 
                     idx = 0
                     for i in args:
-                        self.AsmTree.append( Movl(self.to_base_asm(i), var_raw("0x%x(%%esp)" % idx)) )
+                        self.AsmTree.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
@@ -123,23 +160,23 @@ class Stage2:
 
             elif isinstance(ast, core.Print):
                 self.AsmTree.append(Subl(
-                    AsmVar("12", CONSTANT), AsmVar("%esp", RAW)))
+                    AsmVar("12", CONSTANT), var_raw("%esp")))
                 self.AsmTree.append(Movl(
-                    AsmVar("%eax", RAW), AsmVar("(%esp)", RAW) ))
+                    AsmVar("%eax", RAW), var_raw_mem("(%esp)" )))
                 self.AsmTree.append(Movl(
-                    AsmVar("%ecx", RAW), AsmVar("4(%esp)", RAW)))
+                    AsmVar("%ecx", RAW), var_raw_mem("4(%esp)")))
                 self.AsmTree.append(Movl(
-                    AsmVar("%edx", RAW), AsmVar("8(%esp)", RAW)))
+                    AsmVar("%edx", RAW), var_raw_mem("8(%esp)")))
                 self.AsmTree.append(Push(self.to_base_asm(ast.rhs)))
                 # self.AsmTree.append(Movl(self.to_base_asm(ast.rhs), '%(%esp)'))
                 self.AsmTree.append(Call(AsmVar("print_any", RAW))) 
                 self.AsmTree.append(Movl(
-                    AsmVar("4(%esp)", RAW), AsmVar("%eax", RAW)))
+                    var_raw_mem("4(%esp)"), AsmVar("%eax", RAW)))
 
                 self.AsmTree.append(Movl(
-                    AsmVar("8(%esp)", RAW), AsmVar("%ecx", RAW)))
+                    var_raw_mem("8(%esp)"), AsmVar("%ecx", RAW)))
                 self.AsmTree.append(Movl(
-                    AsmVar("12(%esp)", RAW), AsmVar("%edx", RAW)))
+                    var_raw_mem("12(%esp)"), AsmVar("%edx", RAW)))
                 self.AsmTree.append(Addl(
                     AsmVar("16", CONSTANT), AsmVar("%esp", RAW)))
 

@@ -115,6 +115,14 @@ class Allocation:
     #Checks if the color is a register
     def is_register( self, color ):
         return color < NREG
+
+    def is_memory(self, name, colors):
+        if name.isMemory():
+            return True
+        if not self.is_var(name):
+            return False
+        slot = colors[name]
+        return not self.is_register(slot)
     
     #Runs the spill code generator
     def pass_spill( self, asm_tree, colors ):
@@ -125,17 +133,12 @@ class Allocation:
         for instr in asm_tree:
             if isinstance( instr, Movl ):
                 s, d = instr.src, instr.dest;
-                if self.is_var(s) and self.is_var(d):
-                    s_slot, d_slot = colors[s], colors[d]
-                    # check for a spill
-                    if not (self.is_register(s_slot) or self.is_register(d_slot)): 
-                        t_slot = AsmVar("%d" % self.current_temp, SPILL )
-                        self.current_temp += 1
-                        ret_list.append( Movl(s, t_slot) )
-                        ret_list.append( Movl(t_slot, d) )
-                        did_spill = True
-                    else:
-                        ret_list.append( instr )
+                if self.is_memory(s,colors) and self.is_memory(d,colors):
+                    t_slot = AsmVar("%d" % self.current_temp, SPILL )
+                    self.current_temp += 1
+                    ret_list.append( Movl(s, t_slot) )
+                    ret_list.append( Movl(t_slot, d) )
+                    did_spill = True
                 else:
                     ret_list.append( instr )
     
