@@ -13,7 +13,7 @@ def is_base(pyst):
 #Convert Base Class to Value
 def base_cov(pyst):
     if isinstance(pyst, pyast.Const):
-        return core.Const(pyst.getChildren()[0])
+        return core.Const(pyst.getChildren()[0] << 2);
     if isinstance(pyst, pyast.Name):
         return core.Name(pyst.getChildren()[0])
 
@@ -24,15 +24,15 @@ class Stage1:
         self.buffer = []
 
 #Create Temporary name
-    def tmpvar(self):
-        tmp = "$%d$" % self.tempcount
+    def tmpvar(self, fmt="$%d$"):
+        tmp = fmt % self.tempcount
         self.tempcount += 1
         return tmp
 
 #Translate Base
     def trans(self, pyst, lhs, rhs):
         return \
-            { pyast.Add: core.Add,
+            { pyast.Add: core.PyAdd,
               pyast.Div: core.Div,
               pyast.Mul: core.Mul
             }[pyst.__class__](lhs, rhs)
@@ -72,7 +72,32 @@ class Stage1:
         var = self.tmpvar()
         self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
         return var
+
+    def loose_flatten_list(self, pyst):
+        lst = pyst.getChildren()
+
+        lst_name = self.tmpvar()
+        self.buffer += [core.Assign(lst_name, core.CallFunc(core.Name("create_list"), [core.Const(len(lst))]))]
+
+        data_ptr = self.tmpvar("$data_ptr_%d")
+        self.buffer += [core.Assign(data_ptr, core.Deref(lst_name, 4))]
+
+        self.buffer += [core.Assign( core.Deref(lst_name, 8), core.Const(len(lst))) ]
+
+        i = 0
+        for elem in lst:
+            var = self.loose_flatten(elem);
+            if var is None:
+                self.buffer += [core.Assign( core.Deref(data_ptr,i), base_cov(elem) )]
+            else:
+                self.buffer += [core.Assign( core.Deref(data_ptr,i), core.Name(var) )]
+            i += 4
+
+        self.buffer += [core.Assign(lst_name, core.Add(core.Name(lst_name), core.Const(3)))]
+
+        return lst_name
         
+    # returns variable assigned to
     def loose_flatten(self, pyst):
         if is_base(pyst):
             # already flat
@@ -87,6 +112,9 @@ class Stage1:
 
         if isinstance(pyst, pyast.CallFunc):
             return self.loose_flatten_func(pyst)
+
+        if isinstance(pyst, pyast.List):
+            return self.loose_flatten_list(pyst)
 
         if isinstance(pyst, pyast.UnarySub):
             rhs = pyst.getChildren()[0]
@@ -168,6 +196,9 @@ class Stage1:
 
         elif isinstance(pyst, pyast.Printnl):
             self.flatten_print(pyst);
+
+        elif isinstance(pyst, pyast.List):
+            self.loose_flatten(pyst)
 
         elif is_base(pyst):
             return base_cov(pyst)

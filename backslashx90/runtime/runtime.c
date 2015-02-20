@@ -171,7 +171,7 @@ static void print_pyobj(pyobj x) {
 int input() {
   int i;
   scanf("%d", &i);
-  return i;
+  return i << 2;
 }
 
 pyobj input_int() {

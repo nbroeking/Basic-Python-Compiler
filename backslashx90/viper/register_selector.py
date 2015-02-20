@@ -20,7 +20,7 @@ def allocate_registers( asm_tree ):
 
     print "------------- Liveness"
     for x in sets:
-        print x
+        print "%-40s %s" % x
 
     print "-------------"
    
@@ -98,7 +98,7 @@ class Allocation:
         if var.isRaw(): # constant
             return var
         else:
-            return AsmVar(self.get_mapping( colors[var] ) + "", var.mask)
+            return AsmVar(self.get_mapping( colors[var] ) + "", var.mask, var.dref_off)
 
     #changes all variable names
     def simple_sub( self, asm_tree, colors ):
@@ -120,6 +120,7 @@ class Allocation:
     def pass_spill( self, asm_tree, colors ):
         did_spill = False
    
+        # TODO spill broken for dereferences
         ret_list = []
         for instr in asm_tree:
             if isinstance( instr, Movl ):
@@ -186,23 +187,26 @@ class Allocation:
     
                 t = instr.dest
                 s = instr.src
-    
-                if not t in ret_map:
-                    ret_map[t] = set()
-                for v in l_after:
-                    if v != t: # and v != s:
-                        self.add_interfere( ret_map, v, t )
+
+                if self.is_var(t):
+        
+                    if not t in ret_map:
+                        ret_map[t] = set()
+                    for v in l_after:
+                        if v != t: # and v != s:
+                            self.add_interfere( ret_map, v, t )
     
             if isinstance( instr, Addl ):
                 
                 t = instr.rhs
                 s = instr.lhs
     
-                if not t in ret_map:
-                    ret_map[t] = set()
-                for v in l_after:
-                    if v != t:
-                        self.add_interfere( ret_map, v, t )
+                if self.is_var(t):
+                    if not t in ret_map:
+                        ret_map[t] = set()
+                    for v in l_after:
+                        if v != t:
+                            self.add_interfere( ret_map, v, t )
     
             if isinstance( instr, Neg ):
                 t = instr.val
@@ -214,11 +218,13 @@ class Allocation:
     
             if isinstance( instr, Push ):
                 t = instr.val
-                if not t in ret_map:
-                    ret_map[t] = set()
-                for v in l_after:
-                    if v != t:
-                        self.add_interfere( ret_map, v, t )
+
+                if self.is_var(t):
+                    if not t in ret_map:
+                        ret_map[t] = set()
+                    for v in l_after:
+                        if v != t:
+                            self.add_interfere( ret_map, v, t )
     
         return ret_map
     
@@ -288,11 +294,14 @@ class Allocation:
                 src = instr.src
                 dest = instr.dest
     
-                if dest in current_set:
+                if dest in current_set and dest:
                     current_set.remove( dest )
+
+                if dest.is_deref():
+                    current_set.add( dest.to_basic() )
     
                 if self.is_var(src):
-                    current_set.add( src )
+                    current_set.add( src.to_basic() )
         
             elif isinstance( instr, Addl ):
                 rhs = instr.rhs

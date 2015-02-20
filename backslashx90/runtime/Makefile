@@ -12,4 +12,4 @@ clean:
 	-rm *.o
 
 %.o:%.c
-	gcc -m32 -o $@ -c $<
+	gcc -g3 -ggdb -m32 -o $@ -c $<

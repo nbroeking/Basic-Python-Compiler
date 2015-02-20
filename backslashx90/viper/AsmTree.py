@@ -14,6 +14,7 @@ class Movl:
         self.dest = dest
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def map_vars(self, f): # apply function to all vars
         self.src = f(self.src)
@@ -32,6 +33,7 @@ class Addl:
         self.rhs = rhs
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def map_vars(self, f): # apply function to all vars
         self.rhs = f(self.rhs)
@@ -47,6 +49,7 @@ class Neg:
         self.val = value
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
     
     def _to_str(self):
         return "negl %s " % ( self.val )
@@ -61,6 +64,7 @@ class Push:
         self.val = value
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def _to_str(self):
         return "pushl %s" % (self.val)
@@ -75,6 +79,7 @@ class Pop:
         self.val = value
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def _to_str(self):
         return "popl %s" %(self.val)
@@ -87,6 +92,7 @@ class Call:
         self.name = name
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def _to_str(self):
         return "call %s" % (self.name)
@@ -103,6 +109,7 @@ class Subl:
         self.rhs = rhs
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def _to_str(self):
         return "subl %s, %s" % (self.lhs, self.rhs)
@@ -116,6 +123,7 @@ class Ret:
         pass
 
     def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
 
     def _to_str(self):
         return "ret"
