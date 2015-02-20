@@ -77,7 +77,7 @@ class Stage1:
         lst = pyst.getChildren()
 
         lst_name = self.tmpvar()
-        self.buffer += [core.Assign(lst_name, core.CallFunc(core.Name("create_list"), [core.Const(len(lst))]))]
+        self.buffer += [core.Assign(lst_name, core.CallFunc(core.Name("create_list"), [core.Const(len(lst)<<2)]))]
 
         data_ptr = self.tmpvar("$data_ptr_%d")
         self.buffer += [core.Assign(data_ptr, core.Deref(lst_name, 4))]
