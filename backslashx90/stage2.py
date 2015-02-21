@@ -24,8 +24,8 @@ class Stage2:
         self.namenum += 1
         return ret
 
-    def newlabel(self):
-        ret = ".L%d" % self.labelnum
+    def newlabelnr(self):
+        ret = self.labelnum
         self.labelnum += 1
         return ret
 
@@ -53,17 +53,23 @@ class Stage2:
     def addAsm(self, x):
         self.AsmTree.append(x)
 
+    def save_registers_arr( self, amt=12 ):
+        return [   Subl( var_const(str(amt)), var_raw("%esp"))
+                 , Movl( var_raw("%eax"), var_raw_mem("0x%x(%%esp)" % (amt-12)))
+                 , Movl( var_raw("%ecx"), var_raw_mem("0x%x(%%esp)" % (amt- 8)))
+                 , Movl( var_raw("%edx"), var_raw_mem("0x%x(%%esp)" % (amt- 4))) ]
+
+    def restore_registers_arr( self, amt=12 ):
+        return [ Movl( var_raw_mem("0x%x(%%esp)" % (amt-12)), var_raw("%eax") )
+               , Movl( var_raw_mem("0x%x(%%esp)" % (amt- 8)), var_raw("%ecx") )
+               , Movl( var_raw_mem("0x%x(%%esp)" % (amt- 4)), var_raw("%edx") )
+               , Addl( var_const(str(amt)), var_raw("%esp")) ]
+
     def save_registers( self, amt=12 ):
-        self.addAsm( Subl( var_const(str(amt)), var_raw("%esp")) )
-        self.addAsm( Movl( var_raw("%eax"), var_raw_mem("0x%x(%%esp)" % (amt-12))) )
-        self.addAsm( Movl( var_raw("%ecx"), var_raw_mem("0x%x(%%esp)" % (amt- 8))) )
-        self.addAsm( Movl( var_raw("%edx"), var_raw_mem("0x%x(%%esp)" % (amt- 4))) )
+        map( self.addAsm, self.save_registers_arr(amt) )
 
     def restore_registers( self, amt=12 ):
-        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt-12)), var_raw("%eax") ))
-        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt- 8)), var_raw("%ecx") ))
-        self.addAsm( Movl( var_raw_mem("0x%x(%%esp)" % (amt- 4)), var_raw("%edx") ))
-        self.addAsm( Addl( var_const(str(amt)), var_raw("%esp")) )
+        map( self.addAsm, self.restore_registers_arr(amt) )
         
 
 #Select Instructions
@@ -100,32 +106,32 @@ class Stage2:
                     
                 elif isinstance(op, core.PyAdd):
                     v = self.tmpvar()
-                    self.addAsm(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
+                    vname = var_caller_saved(name)
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), vname))
                     self.addAsm(Movl(self.to_base_asm(op.rhs), AsmVar(v)))
 
                     self.addAsm(Andl(var_const("3"), AsmVar(v)))
-                    self.addAsm(Andl(AsmVar(v), AsmVar(name)))
+                    self.addAsm(Andl(var_const("3"), vname))
                     
-                    to_label = self.newlabel()
-                    end_label = self.newlabel()
+                    labnr = self.newlabelnr()
+                    self.addAsm(Cmpl(AsmVar(v), vname))
                     self.addAsm(Jnz("puke"))
                     self.addAsm(Testl(AsmVar(v), AsmVar(v)))
-                    self.addAsm(Jnz(to_label))
 
-                    self.addAsm(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
-                    self.addAsm(Addl(self.to_base_asm(op.rhs), AsmVar(name)))
-                    self.addAsm(Jmp(end_label))
-
-                    self.addAsm(Label(to_label))
-                    self.save_registers(20)
-                    self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)")))
-                    self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("-4(%esp)")))
-                    self.addAsm(Call("add"))
-                    self.addAsm(Movl(var_raw("%eax"), AsmVar(name)))
-                    self.restore_registers(20)
-                    self.addAsm(Label(end_label))
-
-
+                    self.addAsm(If( ZERO, [
+                          Movl(self.to_base_asm(op.lhs), vname)
+                        , Addl(self.to_base_asm(op.rhs), vname)
+                        ],
+                        self.save_registers_arr(20) + [
+                          Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)"))
+                        , Movl(self.to_base_asm(op.rhs), var_raw_mem("4(%esp)"))
+                        , Andl(var_const("0xFFFFFFFC"), var_raw_mem("(%esp)"))
+                        , Andl(var_const("0xFFFFFFFC"), var_raw_mem("4(%esp)"))
+                        , Call("add")
+                        , Addl(var_const("3"), var_raw("%eax"))
+                        , Movl(var_raw("%eax"), vname) ] +
+                        self.restore_registers_arr(20)
+                    ))
 
                     
                 elif isinstance(op, core.Add):

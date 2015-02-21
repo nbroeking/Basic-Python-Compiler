@@ -4,6 +4,38 @@
 
 from AsmTypes import *
 
+
+class Condition:
+    def __init__(self, jmpstmt, pretty_name): # : string, string
+        self.pretty_name = pretty_name
+        self.jmpstmt = jmpstmt
+
+    def __str__(self):
+        return self.pretty_name
+
+ZERO = Condition("jz", "zero")
+NOT_ZERO = Condition("jnz", "not zero")
+GREATER_THAN = Condition("jg", "greater")
+LESS_THAN = Condition("jl", "less")
+GREATER_THAN_EQ = Condition("jge", "greater eq")
+LESS_THAN_EQ = Condition("lte", "less eq")
+
+if_count = 0
+class If:
+    def __init__(self, cond, then_stmts, else_stmts):
+        global if_count 
+
+        self.cond = cond # :: Condition
+        self.else_stmts = [Jz(".Lthen%d" % if_count)] + else_stmts + [Jmp(".Lendif%d" % if_count)]
+        self.then_stmts = [Label(".Lthen%d" % if_count)] + then_stmts + [Label(".Lendif%d" % if_count)]
+
+        if_count += 1
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+    def _to_str(self):
+        return "if %s { \n   %s \n} else { \n   %s \n}" % (self.cond, "\n   ".join( map(str, self.then_stmts) ), "\n   ".join( map(str, self.else_stmts) ))
+
 #Mov Object
 class Movl:
     def __init__(self, src, dest):
@@ -127,6 +159,24 @@ class Andl:
 
     def _to_str(self):
         return "andl %s, %s" % (self.lhs, self.rhs)
+
+class Cmpl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "cmpl %s, %s" % (self.lhs, self.rhs)
 
 #Neg 
 class Neg:
