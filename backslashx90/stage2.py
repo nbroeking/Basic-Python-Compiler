@@ -115,7 +115,7 @@ class Stage2:
                     
                     labnr = self.newlabelnr()
                     self.addAsm(Cmpl(AsmVar(v), vname))
-                    self.addAsm(Jnz("puke"))
+                    self.addAsm(Jmp("puke", "jnz"))
                     self.addAsm(Testl(AsmVar(v), AsmVar(v)))
 
                     self.addAsm(If( ZERO, [
@@ -128,7 +128,7 @@ class Stage2:
                         , Andl(var_const("0xFFFFFFFC"), var_raw_mem("(%esp)"))
                         , Andl(var_const("0xFFFFFFFC"), var_raw_mem("4(%esp)"))
                         , Call("add")
-                        , Addl(var_const("3"), var_raw("%eax"))
+                        , Orl(var_const("3"), var_raw("%eax"))
                         , Movl(var_raw("%eax"), vname) ] +
                         self.restore_registers_arr(20)
                     ))

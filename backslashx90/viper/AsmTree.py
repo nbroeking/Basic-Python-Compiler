@@ -26,18 +26,16 @@ class If:
         global if_count 
 
         self.cond = cond # :: Condition
-        self.else_stmts = [Jz(".Lthen%d" % if_count)] + else_stmts + [Jmp(".Lendif%d" % if_count)]
+        self.else_stmts = [Jmp(".Lthen%d" % if_count, cond.jmpstmt)] + else_stmts + [Jmp(".Lendif%d" % if_count)]
         self.then_stmts = [Label(".Lthen%d" % if_count)] + then_stmts + [Label(".Lendif%d" % if_count)]
 
         if_count += 1
 
     def map_vars(self, f):
-        print "start if map"
         for i in self.then_stmts:
             i.map_vars(f)
         for i in self.else_stmts:
             i.map_vars(f)
-        print "end if map"
 
     def __str__(self): return self._to_str()
     def __repr__(self): return self._to_str()
@@ -81,11 +79,12 @@ class Label:
 
 #Add
 class Jmp:
-    def __init__(self, name):
+    def __init__(self, name, asm="jmp"):
         if not isinstance(name, str):
             raise Exception()
 
         self.name = name
+        self.asm = asm
 
     def __str__(self): return self._to_str()
     def __repr__(self): return self._to_str()
@@ -94,41 +93,9 @@ class Jmp:
         pass
 
     def _to_str(self):
-        return "jmp %s" % (self.name)
+        return "%s %s" % (self.asm, self.name)
 
 #Add
-class Jz:
-    def __init__(self, name):
-        if not isinstance(name, str):
-            raise Exception()
-
-        self.name = name
-
-    def __str__(self): return self._to_str()
-    def __repr__(self): return self._to_str()
-
-    def map_vars(self, f): # apply function to all vars
-        pass
-
-    def _to_str(self):
-        return "jz %s" % (self.name)
-
-#Add
-class Jnz:
-    def __init__(self, name):
-        if not isinstance(name, str):
-            raise Exception()
-
-        self.name = name
-
-    def __str__(self): return self._to_str()
-    def __repr__(self): return self._to_str()
-
-    def map_vars(self, f): # apply function to all vars
-        pass
-
-    def _to_str(self):
-        return "jnz %s" % (self.name)
 
 #Add
 class Addl:
@@ -148,6 +115,24 @@ class Addl:
 
     def _to_str(self):
         return "addl %s, %s" % (self.lhs, self.rhs)
+
+class Orl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "orl %s, %s" % (self.lhs, self.rhs)
 
 #Add
 class Andl:

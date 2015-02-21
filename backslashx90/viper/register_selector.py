@@ -91,9 +91,9 @@ class Allocation:
         buf = []
         for instr in asm_tree:
             if isinstance(instr, If):
-                for i in instr.else_stmts:
+                for i in self.flatten_ifs(instr.else_stmts):
                     buf.append(i)
-                for i in instr.then_stmts:
+                for i in self.flatten_ifs(instr.then_stmts):
                     buf.append(i)
             else:
                 buf.append(instr)

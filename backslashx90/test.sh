@@ -17,7 +17,7 @@ cyan=$(echo -ne '\e[01;36m')
 nc=$(echo -ne '\e[00;0m')
 
 args=''
-tests=$(find tests -name '*.py')
+tests=$(find tests -name '*.py' | sort)
 while [ $1 ] ; do
     
     case $1 in
@@ -41,7 +41,7 @@ for i in $tests ; do
         python2 compile.py -o /tmp/$$test.s $args $i && \
             gcc -m32 -o/tmp/$$test /tmp/$$test.s runtime/libruntime.a -lm
         rc=$?
-        echo -n "${cyan}Test $i ["
+        echo -n "${cyan}$(printf '%-50s' $i) ["
         if [ $rc -ne 0 ] ; then
             echo "${red}FAIL${nc}]"
             cat $i | while read lin ; do
@@ -71,4 +71,5 @@ for i in $tests ; do
     fi
 
 done
+echo -ne "${nc}"
 
