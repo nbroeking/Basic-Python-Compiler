@@ -31,6 +31,14 @@ class If:
 
         if_count += 1
 
+    def map_vars(self, f):
+        print "start if map"
+        for i in self.then_stmts:
+            i.map_vars(f)
+        for i in self.else_stmts:
+            i.map_vars(f)
+        print "end if map"
+
     def __str__(self): return self._to_str()
     def __repr__(self): return self._to_str()
     def _to_str(self):
@@ -42,18 +50,18 @@ class Movl:
         if not isinstance(src, AsmVar) or not isinstance(dest, AsmVar):
             raise Exception()
 
-        self.src = src
-        self.dest = dest
+        self.lhs = src
+        self.rhs = dest
 
     def __str__(self): return self._to_str()
     def __repr__(self): return self._to_str()
 
     def map_vars(self, f): # apply function to all vars
-        self.src = f(self.src)
-        self.dest = f(self.dest)
+        self.lhs = f(self.lhs)
+        self.rhs = f(self.rhs)
 
     def _to_str(self):
-        return "movl %s, %s" % (self.src, self.dest)
+        return "movl %s, %s" % (self.lhs, self.rhs)
 #Add
 class Label:
     def __init__(self, name):

@@ -24,6 +24,7 @@ class printer:
         self.emit( 'push $puke_msg' )
         self.emit( 'call puts' )
         self.emit( 'movl $127, %eax' )
+        self.emit( 'leave' )
         self.emit( 'ret' )
 
         self.emit( '.globl main' );

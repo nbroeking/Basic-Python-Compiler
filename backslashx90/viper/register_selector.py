@@ -14,7 +14,7 @@ def allocate_registers( asm_tree ):
     #Build the interference model
     alloc = Allocation()
 
-    sets_asm = list(alloc.build_interference_model( asm_tree ))
+    sets_asm = list(alloc.build_interference_model( asm_tree[:] ))
     sets_asm.reverse()
 
     print "------------- Liveness"
@@ -22,7 +22,8 @@ def allocate_registers( asm_tree ):
         print "%-40s %s" % x
 
     print "-------------"
-    (asm_tree, sets) = zip( *sets_asm )
+
+    (_, sets) = zip( *sets_asm ) if len(sets_asm) > 0 else ([],[])
    
     #Build the Color Graph
     graph = alloc.build_graph( sets_asm );
@@ -59,6 +60,7 @@ def allocate_registers( asm_tree ):
     if new_asm:
         return allocate_registers( new_asm )
     else:
+        asm_tree = alloc.flatten_ifs(asm_tree)
         print "---- Before Simple Sub ---"
         for x in asm_tree:
             print x
@@ -85,6 +87,19 @@ class Allocation:
     def __init__(self):
         self.current_temp = 0
 
+    def flatten_ifs(self, asm_tree):
+        buf = []
+        for instr in asm_tree:
+            if isinstance(instr, If):
+                for i in instr.else_stmts:
+                    buf.append(i)
+                for i in instr.then_stmts:
+                    buf.append(i)
+            else:
+                buf.append(instr)
+        return buf
+        
+
     #Returns the mapping for variables to colors
     def get_mapping( self, color ):
         if color < NREG:
@@ -93,6 +108,7 @@ class Allocation:
     
     #Turns the Var into a asm
     def to_asm( self, var, colors ):
+        print "VAR " + str(var)
         if var.isConstant(): # constant
             return var
         if var.isRaw(): # constant
@@ -109,7 +125,7 @@ class Allocation:
     def remove_trivial( self, asm_tree ):
         for instr in asm_tree:
             if not (isinstance(instr, Movl) and
-                    instr.src.getName() == instr.dest.getName()):
+                    instr.lhs.getName() == instr.rhs.getName()):
                     yield instr
     
     #Checks if the color is a register
@@ -131,32 +147,32 @@ class Allocation:
         # TODO spill broken for dereferences
         ret_list = []
         for instr in asm_tree:
-            if isinstance( instr, Movl ):
-                s, d = instr.src, instr.dest;
+            inst_class = instr.__class__
+            if isinstance(instr, Movl) or isinstance(instr, Addl) \
+                or isinstance(instr, Andl):
+
+                s, d = instr.lhs, instr.rhs;
                 if self.is_memory(s,colors) and self.is_memory(d,colors):
                     t_slot = AsmVar("%d" % self.current_temp, SPILL )
                     self.current_temp += 1
                     ret_list.append( Movl(s, t_slot) )
-                    ret_list.append( Movl(t_slot, d) )
+                    ret_list.append( inst_class(t_slot, d) )
                     did_spill = True
                 else:
                     ret_list.append( instr )
-    
-            elif isinstance( instr, Addl ):
-                s, d = instr.lhs, instr.rhs;
-                if self.is_var(s) and self.is_var(d):
-                    s_slot, d_slot = colors[s], colors[d]
-                    # check for a spill
-                    if not (self.is_register(s_slot) or self.is_register(d_slot)): 
-                        t_slot = AsmVar("%d" % self.current_temp, SPILL)
-                        self.current_temp += 1
-                        ret_list.append( Movl(s, t_slot) )
-                        ret_list.append( Addl(t_slot, d) )
-                        did_spill = True
-                    else:
-                        ret_list.append( instr )
-                else:
-                    ret_list.append( instr )
+
+            elif isinstance( instr, If ):
+                then_asm = self.pass_spill(instr.then_stmts, colors)
+                else_asm = self.pass_spill(instr.else_stmts, colors)
+
+                if then_asm or else_asm:
+                    did_spill = True
+
+                new_instr = If(instr.cond, [], [])
+                new_instr.then_stmts = then_asm or instr.then_stmts
+                new_instr.else_stmts = else_asm or instr.else_stmts
+
+                ret_list.append(new_instr)
     
             else:
                 ret_list.append(instr)
@@ -188,8 +204,8 @@ class Allocation:
         for instr, l_after in sets:
             if isinstance( instr, Movl ):
     
-                t = instr.dest
-                s = instr.src
+                t = instr.rhs
+                s = instr.lhs
 
                 if self.is_var(t):
         
@@ -293,8 +309,8 @@ class Allocation:
         # yield (None, set())
         for instr in reverse_asm_tree:
             if isinstance( instr, Movl ):
-                src = instr.src
-                dest = instr.dest
+                src = instr.lhs
+                dest = instr.rhs
     
                 if dest in current_set and dest:
                     current_set.remove( dest )
