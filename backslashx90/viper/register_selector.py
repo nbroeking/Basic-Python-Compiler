@@ -14,7 +14,7 @@ def allocate_registers( asm_tree ):
     #Build the interference model
     alloc = Allocation()
 
-    sets_asm = list(alloc.build_interference_model( asm_tree[:] ))
+    sets_asm = list(alloc.liveness_analysis( asm_tree[:] ))
     sets_asm.reverse()
 
     print "------------- Liveness"
@@ -149,7 +149,7 @@ class Allocation:
         for instr in asm_tree:
             inst_class = instr.__class__
             if isinstance(instr, Movl) or isinstance(instr, Addl) \
-                or isinstance(instr, Andl):
+                or isinstance(instr, Andl) or isinstance(instr, Orl):
 
                 s, d = instr.lhs, instr.rhs;
                 if self.is_memory(s,colors) and self.is_memory(d,colors):
@@ -302,7 +302,7 @@ class Allocation:
         return not name.isRaw() and not name.isConstant()
 
     #Create a list of live variables after each instuction
-    def build_interference_model( self, asm_tree, current_set = set() ):
+    def liveness_analysis( self, asm_tree, current_set = set() ):
         reverse_asm_tree = asm_tree[:]
         reverse_asm_tree.reverse()
     
@@ -347,8 +347,8 @@ class Allocation:
                 print "HELLO"
                 then_stmts = instr.then_stmts
                 else_stmts = instr.else_stmts
-                lst1 = list(self.build_interference_model(then_stmts, current_set.copy()))
-                lst2 = list(self.build_interference_model(else_stmts, current_set.copy()))
+                lst1 = list(self.liveness_analysis(then_stmts, current_set.copy()))
+                lst2 = list(self.liveness_analysis(else_stmts, current_set.copy()))
 
                 set1 = lst1[-1][1]
                 set2 = lst2[-1][1]

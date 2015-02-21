@@ -79,29 +79,7 @@ class Stage2:
                 name = ast.name
                 op = ast.rhs
                 print "TEST: %s %s" % (name.__class__, op.__class__)
-                if isinstance(op, core.List):
-                    self.save_registers()
-
-                    self.addAsm( Subl( var_const("4"), var_raw("%esp") ) )
-                    self.addAsm( Movl( var_const(str(len(op.elems))), var_raw_mem("(%esp)") ) )
-                    self.addAsm( Call("create_list") )
-                    self.addAsm( Movl( var_raw("%eax"), var_caller_saved(name) ) )
-                    self.addAsm( Addl( var_const("4"), var_raw("%esp") ) )
-                    self.restore_registers()
-
-                    # ugly hack
-                    self.addAsm( Push( var_raw("%eax") ) )
-                    self.addAsm( Movl( var_caller_saved(name), var_raw("%eax") ))
-                    self.addAsm( Movl( var_raw("4(%eax)"), var_raw("%eax") ) )
-
-                    i = 0
-                    for elem in op.elems:
-                        self.addAsm( Movl( self.to_base_asm(elem, CALLER_SAVED), var_raw_mem("0x%x(%%eax)" % i) ) )
-                        i += 4
-
-                    self.addAsm( Pop( var_raw("%eax") ))
-
-                elif isinstance(op, core.Deref):
+                if isinstance(op, core.Deref):
                     self.AsmTree.append(Movl(AsmVar(op.arg, 0, op.offset), AsmVar(name)))
                     
                 elif isinstance(op, core.PyAdd):
