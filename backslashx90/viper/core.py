@@ -14,6 +14,8 @@ class CoreNode:
 
 class Assign(CoreNode):
     def __init__(self, name, rhs):
+        if name is None or rhs is None:
+            raise Exception()
         self.rhs = rhs
         self.name = name
         self.children = [self.rhs]

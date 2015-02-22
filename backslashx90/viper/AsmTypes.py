@@ -30,16 +30,16 @@ class AsmVar:
             if isinstance(name, core.Deref):
                 self.name = name.arg
                 self.dref_off = name.offset
-                self.mask = mask | SPILL
+                self.mask = mask | SPILL | MEMORY
             else:
-                raise Exception()
+                raise Exception("Bad type " + str(name.__class__) )
         else:
             self.name = name
             self.mask = mask
             self.dref_off = dref_off
 
             if self.dref_off is not None:
-                self.mask |= SPILL
+                self.mask |= SPILL | MEMORY
 
     def to_basic(self):
         return AsmVar(self.name, self.mask)

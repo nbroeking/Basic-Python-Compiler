@@ -21,11 +21,11 @@ class printer:
         self.emit( '.text' );
         
         self.emit( 'puke:' )
-        self.emit( 'push $puke_msg' )
-        self.emit( 'call puts' )
-        self.emit( 'movl $127, %eax' )
-        self.emit( 'leave' )
-        self.emit( 'ret' )
+        self.emit( '    push $puke_msg' )
+        self.emit( '    call puts' )
+        self.emit( '    movl $127, %eax' )
+        self.emit( '    leave' )
+        self.emit( '    ret' )
 
         self.emit( '.globl main' );
         self.emit( '.type main, @function' );

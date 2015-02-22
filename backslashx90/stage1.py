@@ -73,6 +73,9 @@ class Stage1:
         self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
         return var
 
+    def addAsm(self, asm_node):
+        self.buffer.append(asm_node)
+
     def loose_flatten_list(self, pyst):
         lst = pyst.getChildren()
 
@@ -96,6 +99,27 @@ class Stage1:
         self.buffer += [core.Assign(lst_name, core.Add(core.Name(lst_name), core.Const(3)))]
 
         return lst_name
+
+    def loose_flatten_dict(self, pyst):
+        dct_children = pyst.getChildren()
+        dct_name = self.tmpvar()
+
+        self.addAsm( core.Assign(dct_name, core.CallFunc(core.Name("create_dict"), [])) )
+        self.addAsm( core.Assign(dct_name, core.Add(core.Name(dct_name), core.Const(3))) )
+
+        i = len(dct_children)-2
+        while i >= 0:
+            key_var = self.loose_flatten(dct_children[i])
+            val_var = self.loose_flatten(dct_children[i+1])
+
+            key_arg = core.Name(key_var) if not key_var is None else base_cov(dct_children[i])
+            val_arg = core.Name(val_var) if not val_var is None else base_cov(dct_children[i+1])
+
+            self.addAsm( 
+                core.Assign(self.tmpvar(), core.CallFunc(core.Name("set_subscript"), [core.Name(dct_name), key_arg, val_arg])) )
+            i -= 2
+
+        return dct_name
         
     # returns variable assigned to
     def loose_flatten(self, pyst):
@@ -115,6 +139,9 @@ class Stage1:
 
         if isinstance(pyst, pyast.List):
             return self.loose_flatten_list(pyst)
+
+        if isinstance(pyst, pyast.Dict):
+            return self.loose_flatten_dict(pyst)
 
         if isinstance(pyst, pyast.UnarySub):
             rhs = pyst.getChildren()[0]

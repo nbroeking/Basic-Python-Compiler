@@ -137,6 +137,7 @@ class Allocation:
             return True
         if not self.is_var(name):
             return False
+
         slot = colors[name]
         return not self.is_register(slot)
     
