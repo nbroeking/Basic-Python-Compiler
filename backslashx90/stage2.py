@@ -88,8 +88,9 @@ class Stage2:
                     self.addAsm(Movl(self.to_base_asm(op.lhs), vname))
                     self.addAsm(Movl(self.to_base_asm(op.rhs), AsmVar(v)))
 
-                    self.addAsm(Andl(var_const("3"), AsmVar(v)))
-                    self.addAsm(Andl(var_const("3"), vname))
+                    # Will break with floats
+                    self.addAsm(Andl(var_const("2"), AsmVar(v)))
+                    self.addAsm(Andl(var_const("2"), vname))
                     
                     labnr = self.newlabelnr()
                     self.addAsm(Cmpl(AsmVar(v), vname))
@@ -99,6 +100,7 @@ class Stage2:
                     self.addAsm(If( ZERO, [
                           Movl(self.to_base_asm(op.lhs), vname)
                         , Addl(self.to_base_asm(op.rhs), vname)
+                        , Andl(var_const("0xFFFFFFFC"), vname)
                         ],
                         self.save_registers_arr(20) + [
                           Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)"))
@@ -140,6 +142,33 @@ class Stage2:
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED))) #NOTE:This variable was marked as * 
                     self.restore_registers(n_bytes)
+
+
+            elif isinstance(ast, core.If):
+                cond = ast.cond
+                thens = ast.then_stmts
+                elses = ast.else_stmts
+
+                
+                tmpv = var_spill(self.tmpvar())
+
+                self.addAsm( Movl(self.to_base_asm(cond), tmpv) )
+                self.addAsm( Andl(var_const("0xFFFFFFFC"), tmpv) )
+
+                old_asm = self.AsmTree
+                self.AsmTree = []
+
+                self.instructionSelection(thens)
+                new_thens = self.AsmTree
+                self.AsmTree = []
+
+                self.instructionSelection(elses)
+                new_elses = self.AsmTree
+
+                self.AsmTree = old_asm
+
+                self.addAsm( If( NOT_ZERO, new_thens, new_elses ) )
+
 
 
             elif isinstance(ast, core.Print):

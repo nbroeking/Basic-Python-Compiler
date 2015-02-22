@@ -47,7 +47,7 @@ def main( argv):
             outfile=outfile[:-3]+".s"
 
 #Flatten
-    flattened = flat.flatten(ast)
+    flattened = flat.flatten(ast, True)
     for n in flattened:
         print(n._to_str())
 

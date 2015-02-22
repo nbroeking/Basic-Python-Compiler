@@ -19,14 +19,17 @@ def base_cov(pyst):
 
 #Flattener Class
 class Stage1:
-    def __init__(self):
-        self.tempcount = 0
+    tempcount = 0
+    def __init__(self, root=True):
         self.buffer = []
+        if root:
+            self.addAsm( core.Assign("True", core.Const(0b101)) )
+            self.addAsm( core.Assign("False", core.Const(0b001)) )
 
 #Create Temporary name
     def tmpvar(self, fmt="$%d$"):
-        tmp = fmt % self.tempcount
-        self.tempcount += 1
+        tmp = fmt % Stage1.tempcount
+        Stage1.tempcount += 1
         return tmp
 
 #Translate Base
@@ -100,6 +103,40 @@ class Stage1:
 
         return lst_name
 
+    def try_var(self, varname, orig):
+        if varname is None:
+            return base_cov(orig)
+        else:
+            return core.Name(varname)
+    def flatten_to_var(self, orig):
+        tmp = self.loose_flatten(orig)
+        print "Flatten",tmp
+        return self.try_var(tmp, orig)
+        
+    def loose_flatten_if(self, pyst):
+        cond = self.flatten_to_var( pyst.getChildren()[0] )
+
+        then_nodes = pyst.getChildren()[1]
+        if pyst.getChildren()[2] is None:
+            else_nodes = []
+        else:
+            else_nodes = flatten(pyst.getChildren()[2])
+
+        self.addAsm(core.If(cond, flatten(then_nodes), else_nodes))
+        return None
+        
+    def loose_flatten_ifexpr(self, pyst):
+        cond = pyst.getChildren()[0]
+        var = self.tmpvar()
+
+        new_if = pyast.If( [(cond, 
+            pyast.Stmt([pyast.Assign([pyast.AssName(var, 'OP_ASSIGN')], pyst.getChildren()[1])]))],
+            pyast.Stmt([pyast.Assign([pyast.AssName(var, 'OP_ASSIGN')], pyst.getChildren()[2])]), None )
+
+        self.loose_flatten_if(new_if)
+        return var
+
+
     def loose_flatten_dict(self, pyst):
         dct_children = pyst.getChildren()
         dct_name = self.tmpvar()
@@ -120,6 +157,16 @@ class Stage1:
             i -= 2
 
         return dct_name
+
+    def loose_flatten_bool_and(self, pyst):
+        var = self.flatten_to_var(pyst.getChildren()[0])
+        if_stmt = pyast.IfExp(pyast.Name(var), pyst.getChildren()[1], pyast.Name(var))
+        return self.loose_flatten_ifexpr(if_stmt)
+
+    def loose_flatten_bool_or(self, pyst):
+        var = self.flatten_to_var(pyst.getChildren()[0])
+        if_stmt = pyast.IfExp(pyast.Name(var), pyast.Name(var), pyst.getChildren()[1])
+        return self.loose_flatten_ifexpr(if_stmt)
         
     # returns variable assigned to
     def loose_flatten(self, pyst):
@@ -143,6 +190,15 @@ class Stage1:
         if isinstance(pyst, pyast.Dict):
             return self.loose_flatten_dict(pyst)
 
+        if isinstance(pyst, pyast.If):
+            return self.loose_flatten_if(pyst)
+
+        if isinstance(pyst, pyast.And):
+            return self.loose_flatten_bool_and(pyst)
+
+        if isinstance(pyst, pyast.Or):
+            return self.loose_flatten_bool_or(pyst)
+
         if isinstance(pyst, pyast.UnarySub):
             rhs = pyst.getChildren()[0]
             if is_base( rhs ):
@@ -154,6 +210,9 @@ class Stage1:
                 return self.loose_flatten(pyast.UnarySub(pyast.Name(var)));
 
             return
+
+        if isinstance(pyst, pyast.IfExp):
+            return self.loose_flatten_ifexpr(pyst)
 
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
@@ -215,7 +274,7 @@ class Stage1:
         elif isinstance(pyst, pyast.Add):
             self.loose_flatten(pyst)
 
-        elif isinstance(pyst, pyast.Add):
+        elif isinstance(pyst, pyast.If):
             self.loose_flatten(pyst)
 
         elif isinstance(pyst, pyast.UnarySub):
@@ -236,8 +295,8 @@ class Stage1:
         return self.buffer
 
 # simply call flatten on a stage1
-def flatten(ast):
-    sg1 = Stage1()
+def flatten(ast, root=False):
+    sg1 = Stage1(root)
     return sg1.flatten(ast)
 
 #print the flatten ast

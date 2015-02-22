@@ -40,6 +40,33 @@ class PyConst(CoreNode):
     def _to_str(self):
         return "p(%s)" % self.raw
 
+class And(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        self.children = [lhs, rhs]
+
+    def _to_str(self):
+        return "%s and %s" % self.raw
+
+class If(CoreNode):
+    def __init__(self, cond, then_stmts, else_stmts):
+        self.cond = cond
+        self.then_stmts = then_stmts
+        self.else_stmts = else_stmts
+
+    def _to_str(self):
+        return "if (%s) {\n%s\n} else {\n%s\n}" % (self.cond, "\n".join(map(str,self.then_stmts)), "\n".join(map(str,self.else_stmts)))
+
+class Or(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        self.children = [lhs, rhs]
+
+    def _to_str(self):
+        return "%s or %s" % self.raw
+
 # a variable name
 class Name(CoreNode):
     def __init__(self, name):

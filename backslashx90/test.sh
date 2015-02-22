@@ -34,7 +34,7 @@ done
 for i in $tests ; do
     real="$(echo -e "$input" | python2 $i)"
     if [ $? -ne 0 ] ; then
-        echo "${red}Bad test. Python fails${nc}"
+        echo "${red}$i: Bad test. Python fails${nc}"
         echo "$real"
     else
         echo -n "${nc}"
