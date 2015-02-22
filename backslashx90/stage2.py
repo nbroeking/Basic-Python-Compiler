@@ -114,6 +114,17 @@ class Stage2:
                     ))
 
                     
+                elif isinstance(op, core.Subscript):
+                    vname = var_caller_saved(name)
+                    lhs = op.lhs
+                    rhs = op.rhs
+                    self.save_registers(20)
+                    self.addAsm( Movl(self.to_base_asm(lhs), var_raw_mem("(%esp)")) )
+                    self.addAsm( Movl(self.to_base_asm(rhs), var_raw_mem("4(%esp)")) )
+                    self.addAsm( Call("get_subscript") )
+                    self.addAsm( Movl(var_raw("%eax"), vname) )
+                    self.restore_registers(20)
+                    
                 elif isinstance(op, core.Add):
                     self.AsmTree.append(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
                     self.AsmTree.append(Addl(self.to_base_asm(op.rhs), AsmVar(name)))

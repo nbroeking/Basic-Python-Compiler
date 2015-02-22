@@ -178,6 +178,30 @@ class Stage1:
         var = self.unbasecov(self.flatten_to_var(pyst.getChildren()[0]))
         if_stmt = pyast.IfExp(var, var, pyst.getChildren()[1])
         return self.loose_flatten_ifexpr(if_stmt)
+
+    def loose_flatten_subscript(self, pyst):
+        children = pyst.getChildren()
+        lhs, rhs = (children[0], children[2])
+        lhs_, rhs_ = base_cov(lhs), base_cov(rhs)
+
+        print "PYST",pyst,"|",children
+        print "RHS_CLASS",rhs.__class__
+
+        if is_base(lhs) and is_base(rhs):
+            var = self.tmpvar()
+            self.buffer += [core.Assign(var, core.Subscript(lhs_, rhs_))];
+            return var
+
+        else:
+            if not is_base(lhs):
+                var = self.loose_flatten(lhs)
+                tmp = pyast.Subscript(pyast.Name(var), 'OP_APPLY', [rhs])
+                return self.loose_flatten(tmp)
+
+            else:
+                var = self.loose_flatten(rhs)
+                tmp = pyast.Subscript(lhs, 'OP_APPLY', [pyast.Name(var)])
+                return self.loose_flatten(tmp)
         
     # returns variable assigned to
     def loose_flatten(self, pyst):
@@ -209,6 +233,9 @@ class Stage1:
 
         if isinstance(pyst, pyast.Or):
             return self.loose_flatten_bool_or(pyst)
+
+        if isinstance(pyst, pyast.Subscript):
+            return self.loose_flatten_subscript(pyst)
 
         if isinstance(pyst, pyast.UnarySub):
             rhs = pyst.getChildren()[0]

@@ -151,6 +151,14 @@ class List(CoreNode):
     def __str__(self):
         return self._to_str()
 
+class Subscript(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.rhs = rhs
+        self.lhs = lhs
+
+    def _to_str(self):  
+        return "%s#%s" % (self.lhs,self.rhs)
+    
 class Div(CoreNode):
     def __init__(self, lhs, rhs):
         self.lhs = lhs
