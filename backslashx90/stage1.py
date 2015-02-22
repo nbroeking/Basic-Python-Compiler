@@ -105,13 +105,18 @@ class Stage1:
 
     def try_var(self, varname, orig):
         if varname is None:
+            print "NONE NONE NONE NONE NONE NONE NONE"
             return base_cov(orig)
         else:
+            print "ELSE ELSE ELSE ELSE ELSE ELSE ELSE"
             return core.Name(varname)
     def flatten_to_var(self, orig):
         tmp = self.loose_flatten(orig)
-        print "Flatten",tmp
-        return self.try_var(tmp, orig)
+        print "TMP", tmp
+        print "ORIG", orig
+        ret = self.try_var(tmp, orig)
+        print "RET", ret
+        return ret
         
     def loose_flatten_if(self, pyst):
         cond = self.flatten_to_var( pyst.getChildren()[0] )
@@ -159,13 +164,19 @@ class Stage1:
         return dct_name
 
     def loose_flatten_bool_and(self, pyst):
-        var = self.flatten_to_var(pyst.getChildren()[0])
-        if_stmt = pyast.IfExp(pyast.Name(var), pyst.getChildren()[1], pyast.Name(var))
+        var = self.unbasecov(self.flatten_to_var(pyst.getChildren()[0]))
+        if_stmt = pyast.IfExp(var, pyst.getChildren()[1], var)
         return self.loose_flatten_ifexpr(if_stmt)
 
+    def unbasecov(self, viperast):
+        if isinstance(viperast, core.Const):
+            return pyast.Const(viperast.raw >> 2)
+        elif isinstance(viperast, core.Name):
+            return pyast.Name(viperast.name)
+
     def loose_flatten_bool_or(self, pyst):
-        var = self.flatten_to_var(pyst.getChildren()[0])
-        if_stmt = pyast.IfExp(pyast.Name(var), pyast.Name(var), pyst.getChildren()[1])
+        var = self.unbasecov(self.flatten_to_var(pyst.getChildren()[0]))
+        if_stmt = pyast.IfExp(var, var, pyst.getChildren()[1])
         return self.loose_flatten_ifexpr(if_stmt)
         
     # returns variable assigned to
