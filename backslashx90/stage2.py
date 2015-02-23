@@ -112,7 +112,80 @@ class Stage2:
                         , Movl(var_raw("%eax"), vname) ] +
                         self.restore_registers_arr(20)
                     ))
+                
+                elif isinstance(op, core.Not):
+                    vname = var_caller_saved(name)
+                    self.save_registers(16)
+                    self.addAsm( Movl(self.to_base_asm(op.rhs), var_raw_mem("(%esp)")) )
+                    self.addAsm( Call("is_true") )
+                    self.addAsm( Xorl(var_const("1"), var_raw("%eax")) )
+                    self.addAsm( Shll( var_const("2"), var_raw("%eax") ))
+                    self.addAsm( Orl( var_const("1"), var_raw("%eax") ))
+                    self.addAsm( Movl(var_raw("%eax"), vname) )
+                    self.restore_registers(16)
+                
+                elif isinstance(op, core.Equals):
+                    v = self.tmpvar()
+                    vname = var_caller_saved(name)
+                    vname.setCantSpill()
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), vname))
+                    self.addAsm(Movl(self.to_base_asm(op.rhs), AsmVar(v)))
 
+                    # Will break with floats
+                    self.addAsm(Andl(var_const("2"), AsmVar(v)))
+                    self.addAsm(Andl(var_const("2"), vname))
+                    
+                    labnr = self.newlabelnr()
+                    self.addAsm(Cmpl(AsmVar(v), vname))
+
+                    t1 = AsmVar(self.tmpvar())
+                    t2 = AsmVar(self.tmpvar())
+                    t3 = AsmVar(self.tmpvar())
+
+                    self.addAsm(If( NOT_ZERO, [ Movl(var_const("1"), vname) ],
+                        [
+                          Testl(AsmVar(v), AsmVar(v)),
+                          If( ZERO, [
+                            # is int or bool
+                              Movl(self.to_base_asm(op.lhs), t1)
+                            , Movl(self.to_base_asm(op.rhs), t2)
+                            , Shrl(var_const("2"), t1)
+                            , Shrl(var_const("2"), t2)
+                            , Movl(var_const("5"), t3)
+                            , Movl(var_const("1"), vname)
+                            , Cmpl(t1, t2)
+                            , Cmovzl(t3, vname)
+                          ],
+                            # is big obj
+                            self.save_registers_arr(20) + [
+                              Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)"))
+                            , Movl(self.to_base_asm(op.rhs), var_raw_mem("4(%esp)"))
+                            , Andl(var_const("0xFFFFFFFC"), var_raw_mem("(%esp)"))
+                            , Andl(var_const("0xFFFFFFFC"), var_raw_mem("4(%esp)"))
+                            , Call("equal")
+                            , Shll(var_const("2"), var_raw("%eax"))
+                            , Orl(var_const("1"), var_raw("%eax"))
+                            , Movl(var_raw("%eax"), vname) ] +
+                            self.restore_registers_arr(20)
+                          )
+
+                        ] ))
+
+                elif isinstance(op, core.Is):
+                    vname = var_spill(name)
+                    t1 = AsmVar(self.tmpvar())
+                    t2 = AsmVar(self.tmpvar())
+                    t3 = AsmVar(self.tmpvar())
+
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), t1))
+                    self.addAsm(Movl(self.to_base_asm(op.rhs), t2))
+                    self.addAsm(Movl(var_const("1"), t3))
+                    self.addAsm(Xorl(vname, vname))
+
+                    self.addAsm(Cmpl(t1, t2))
+                    self.addAsm(Cmovzl(t3, vname))
+                    self.addAsm(Shll(var_const("2"), vname))
+                    self.addAsm(Orl(var_const("1"), vname))
                     
                 elif isinstance(op, core.Subscript):
                     vname = var_caller_saved(name)

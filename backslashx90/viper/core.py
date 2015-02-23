@@ -23,6 +23,37 @@ class Assign(CoreNode):
     def _to_str(self):
         return "%s = %s" % (self.name, self.rhs._to_str())
 
+class Not(CoreNode):
+    def __init__(self, rhs):
+        self.rhs = rhs
+
+    def _to_str(self):
+        return "Not %s" % self.rhs
+
+class Equals(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def _to_str(self):
+        return "%s == %s" % (self.lhs, self.rhs)
+
+class Compare(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def _to_str(self):
+        return "%s node %s" % (self.lhs, self.rhs)
+
+class Is(CoreNode):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def _to_str(self):
+        return  "%s is %s" % (self.lhs, self.rhs)
+
 # a constant value
 class Const(CoreNode):
     def __init__(self, raw):

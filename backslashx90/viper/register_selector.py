@@ -149,8 +149,10 @@ class Allocation:
         ret_list = []
         for instr in asm_tree:
             inst_class = instr.__class__
-            if isinstance(instr, Movl) or isinstance(instr, Addl) \
-                or isinstance(instr, Andl) or isinstance(instr, Orl):
+            if isinstance(instr, Movl) or isinstance(instr, Addl) or \
+               isinstance(instr, Xorl) or isinstance(instr, Shll) or \
+               isinstance(instr, Shrl) or isinstance(instr, Cmovzl) or \
+               isinstance(instr, Andl) or isinstance(instr, Orl):
 
                 s, d = instr.lhs, instr.rhs;
                 if self.is_memory(s,colors) and self.is_memory(d,colors):
@@ -203,7 +205,8 @@ class Allocation:
     def build_graph( self, sets ):
         ret_map = dict()
         for instr, l_after in sets:
-            if isinstance( instr, Movl ):
+            if isinstance(instr, Movl) or \
+               isinstance(instr, Cmovzl):
     
                 t = instr.rhs
                 s = instr.lhs
@@ -216,7 +219,13 @@ class Allocation:
                         if v != t: # and v != s:
                             self.add_interfere( ret_map, v, t )
     
-            if isinstance(instr, Addl) or isinstance(instr, Andl):
+            elif isinstance(instr, Addl) or \
+                 isinstance(instr, Andl) or \
+                 isinstance(instr, Orl) or \
+                 isinstance(instr, Xorl) or \
+                 isinstance(instr, Cmpl) or \
+                 isinstance(instr, Shll) or \
+                 isinstance(instr, Shrl):
                 
                 t = instr.rhs
                 s = instr.lhs
@@ -228,7 +237,7 @@ class Allocation:
                         if v != t:
                             self.add_interfere( ret_map, v, t )
     
-            if isinstance( instr, Neg ):
+            if isinstance(instr, Neg):
                 t = instr.val
                 if not t in ret_map:
                     ret_map[t] = set()
@@ -309,7 +318,8 @@ class Allocation:
     
         # yield (None, set())
         for instr in reverse_asm_tree:
-            if isinstance( instr, Movl ):
+            if isinstance(instr, Movl) or \
+               isinstance(instr, Cmovzl):
                 src = instr.lhs
                 dest = instr.rhs
     
@@ -322,7 +332,13 @@ class Allocation:
                 if self.is_var(src):
                     current_set.add( src.to_basic() )
         
-            elif isinstance( instr, Addl ) or isinstance(instr, Andl):
+            elif isinstance(instr, Addl) or \
+                 isinstance(instr, Andl) or \
+                 isinstance(instr, Cmpl) or \
+                 isinstance(instr, Orl) or \
+                 isinstance(instr, Xorl) or \
+                 isinstance(instr, Shll) or \
+                 isinstance(instr, Shrl):
                 rhs = instr.rhs
                 lhs = instr.lhs
     
@@ -345,7 +361,6 @@ class Allocation:
                 name = instr.name
 
             elif isinstance( instr, If ):
-                print "HELLO"
                 then_stmts = instr.then_stmts
                 else_stmts = instr.else_stmts
                 lst1 = list(self.liveness_analysis(then_stmts, current_set.copy()))

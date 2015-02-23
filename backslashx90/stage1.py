@@ -105,17 +105,12 @@ class Stage1:
 
     def try_var(self, varname, orig):
         if varname is None:
-            print "NONE NONE NONE NONE NONE NONE NONE"
             return base_cov(orig)
         else:
-            print "ELSE ELSE ELSE ELSE ELSE ELSE ELSE"
             return core.Name(varname)
     def flatten_to_var(self, orig):
         tmp = self.loose_flatten(orig)
-        print "TMP", tmp
-        print "ORIG", orig
         ret = self.try_var(tmp, orig)
-        print "RET", ret
         return ret
         
     def loose_flatten_if(self, pyst):
@@ -237,6 +232,21 @@ class Stage1:
         if isinstance(pyst, pyast.Subscript):
             return self.loose_flatten_subscript(pyst)
 
+        if isinstance(pyst, pyast.Compare):
+            return self.loose_flatten_compare(pyst)
+
+        if isinstance(pyst, pyast.Not):
+            rhs = pyst.getChildren()[0]
+            if is_base( rhs ):
+                var = self.tmpvar()
+                self.buffer += [core.Assign(var, core.Not(base_cov(rhs)))];
+                return var
+            else:
+                var = self.loose_flatten(rhs);
+                return self.loose_flatten(pyast.Not(pyast.Name(var)));
+
+            return
+
         if isinstance(pyst, pyast.UnarySub):
             rhs = pyst.getChildren()[0]
             if is_base( rhs ):
@@ -254,6 +264,45 @@ class Stage1:
 
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
+
+    def loose_flatten_compare(self, pyst):
+        #Restruc
+        array = pyst.getChildren()
+        print "ARRAY ", array
+
+        if len(array) <= 3:
+            # this is the base case
+            lhs = array[0]
+            op = array[1]
+            rhs = array[2]
+
+            lhs_flat = self.flatten_to_var(lhs)
+            rhs_flat = self.flatten_to_var(rhs)
+
+            var = self.tmpvar()
+            if op == "==":
+                self.buffer += [core.Assign(var, core.Equals(lhs_flat, rhs_flat))]
+            elif op == "is":
+                self.buffer += [core.Assign(var, core.Is(lhs_flat, rhs_flat))]
+            return var
+
+
+
+        current_compare = pyast.Compare( array[0], [array[1], array[2]] )
+        compare1 = pyast.Compare(array[2], [array[3], array[4]])
+
+        current_and = pyast.And( (current_compare, compare1) )
+
+        i = 5
+        while i < len(array):
+            current_compare = pyast.Compare( array[i-1], [array[i], array[i+1]] )
+            current_and = pyast.And( (current_and, current_compare) )
+            i += 2
+        
+        print "CURRENT_CMP: ", current_compare
+        print "CURRENT_AND: ", current_and
+        #Flatten New Tree
+        return self.loose_flatten( current_and )
 
 #Flatten Assignment
     def flatten_assign(self, pyst):
@@ -322,6 +371,9 @@ class Stage1:
             self.flatten_print(pyst);
 
         elif isinstance(pyst, pyast.List):
+            self.loose_flatten(pyst)
+
+        elif isinstance(pyst, pyast.Compare):
             self.loose_flatten(pyst)
 
         elif is_base(pyst):

@@ -13,7 +13,7 @@ input="10
 
 red=$(echo -ne '\e[01;31m')
 green=$(echo -ne '\e[01;32m')
-cyan=$(echo -ne '\e[01;36m')
+cyan=$(echo -ne '\e[01;34m')
 nc=$(echo -ne '\e[00;0m')
 
 args=''

@@ -60,6 +60,24 @@ class Movl:
 
     def _to_str(self):
         return "movl %s, %s" % (self.lhs, self.rhs)
+
+class Cmovzl:
+    def __init__(self, src, dest):
+        if not isinstance(src, AsmVar) or not isinstance(dest, AsmVar):
+            raise Exception()
+
+        self.lhs = src
+        self.rhs = dest
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.lhs = f(self.lhs)
+        self.rhs = f(self.rhs)
+
+    def _to_str(self):
+        return "cmovzl %s, %s" % (self.lhs, self.rhs)
 #Add
 class Label:
     def __init__(self, name):
@@ -115,6 +133,60 @@ class Addl:
 
     def _to_str(self):
         return "addl %s, %s" % (self.lhs, self.rhs)
+
+class Shll:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "shll %s, %s" % (self.lhs, self.rhs)
+
+class Shrl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "shrl %s, %s" % (self.lhs, self.rhs)
+
+class Xorl:
+    def __init__(self, lhs, rhs):
+        if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):
+            raise Exception()
+
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.rhs = f(self.rhs)
+        self.lhs = f(self.lhs)
+
+    def _to_str(self):
+        return "xorl %s, %s" % (self.lhs, self.rhs)
 
 class Orl:
     def __init__(self, lhs, rhs):
