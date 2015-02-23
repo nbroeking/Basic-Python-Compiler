@@ -90,7 +90,6 @@ class Stage2:
                 self.addAsm( Comment("*" + str(ast)) )
                 name = ast.name
                 op = ast.rhs
-                print "TEST: %s %s" % (name.__class__, op.__class__)
                 if isinstance(op, core.Deref):
                     self.AsmTree.append(Movl(AsmVar(op.arg, 0, op.offset), AsmVar(name)))
                     

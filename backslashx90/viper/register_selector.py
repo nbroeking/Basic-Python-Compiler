@@ -21,67 +21,66 @@ def allocate_registers( asm_tree ):
     sets_asm = list(alloc.liveness_analysis( asm_tree[:] ))
     sets_asm.reverse()
 
-    print "------------- Liveness"
-    for x in sets_asm:
-        print "%-40s %s" % x
+    # print "------------- Liveness"
+    # for x in sets_asm:
+    #     print "%-40s %s" % x
 
-    print "-------------"
+    # print "-------------"
 
     (_, sets) = zip( *sets_asm ) if len(sets_asm) > 0 else ([],[])
    
     #Build the Color Graph
     graph = alloc.build_graph( sets_asm );
 
-    print "\n-----------INTERFERENCE--------------"
-    for x in graph:
-        print "\n", x, "-> ", 
-        for y in graph[x]:
-            print y, " ",
-    print "--------------"
+    # print "\n-----------INTERFERENCE--------------"
+    # for x in graph:
+    #     print "\n", x, "-> ", 
+    #     for y in graph[x]:
+    #         print y, " ",
+    # print "--------------"
 
     (colors, n_stack_vars) = alloc.color_graph( graph )
 
-    print "\n---------- Edge Detection"
-    alloc.print_graph(colors)
-    print "------------\n"
+    # print "\n---------- Edge Detection"
+    # alloc.print_graph(colors)
+    # print "------------\n"
 
 
-    print "------------ ASM BEFORE SPILLING"
-    for x in asm_tree:
-        print x
+    # print "------------ ASM BEFORE SPILLING"
+    # for x in asm_tree:
+    #     print x
 
-    print "--------------\n"
+    # print "--------------\n"
     # returns None if pass
     # If there was a spill then generate spill code
     new_asm = alloc.pass_spill( asm_tree, colors )
 
-    print "----------- Asm After Spilling"
-    if new_asm:
-        print "Spilled our code"
-    else:
-        print "We did not spill"
-    print "------------\n"
+    # print "----------- Asm After Spilling"
+    # if new_asm:
+    #     print "Spilled our code"
+    # else:
+    #     print "We did not spill"
+    # print "------------\n"
     if new_asm:
         return allocate_registers( new_asm )
     else:
         asm_tree = alloc.flatten_ifs(asm_tree)
-        print "---- Before Simple Sub ---"
-        for x in asm_tree:
-            print x
-        print"----\n"
+        # print "---- Before Simple Sub ---"
+        # for x in asm_tree:
+        #     print x
+        # print"----\n"
 
         alloc.simple_sub(asm_tree, colors)
-        print "-----After Simple Sub---"
-        for y in asm_tree:
-            print y
-        print "--------\n"
+        # print "-----After Simple Sub---"
+        # for y in asm_tree:
+        #     print y
+        # print "--------\n"
 
-        print "------COLORS AFTER SIMPLE SUB---"
-        for x in colors:
-            print x, " = ", colors[x], "=", alloc.get_mapping(colors[x])
+        # print "------COLORS AFTER SIMPLE SUB---"
     
-        print "--------\n\n"
-        asm_tree = list(alloc.remove_trivial(asm_tree))
+        # print "--------\n\n"
+        asm_tree = [Comment( "%s = %s = %s" % (x, colors[x], alloc.get_mapping(colors[x]))) for x in colors] + \
+            list(alloc.remove_trivial(asm_tree))
 
 
     return [Subl(AsmVar("%s" % ((n_stack_vars+2)*4), CONSTANT), AsmVar("%esp", RAW))] + asm_tree
@@ -126,12 +125,24 @@ class Allocation:
 
     #Remove trivial instructions
     def remove_trivial( self, asm_tree ):
-        for instr in asm_tree:
-            if not (isinstance(instr, Movl) and
-                    instr.lhs.is_same(instr.rhs)):
-                    yield instr
+        i = 0
+        while i < len(asm_tree)-1:
+            instr = asm_tree[i]
+            instr2 = asm_tree[i+1]
+            if isinstance(instr, Movl) and \
+                    instr.lhs.is_same(instr.rhs):
+                        pass
+
+            if isinstance(instr, Movl) and \
+               isinstance(instr2, Movl) and \
+               instr.rhs.is_same(instr2.lhs) and \
+               instr.lhs.is_same(instr2.rhs):
+                i += 1
+        
             else:
-                print "removed %s" % instr 
+                yield instr
+            i += 1
+        yield asm_tree[-1]
     
     #Checks if the color is a register
     def is_register( self, color ):
@@ -162,7 +173,6 @@ class Allocation:
                 s, d = instr.lhs, instr.rhs; # asm vars
 
                 if s.is_deref() and self.is_memory(AsmVar(s.name), colors):
-                        print "DEREF"
                         t_name = "%d" % self.current_temp
                         t_var = AsmVar(t_name, SPILL)
                         t_deref = AsmVar(t_name, SPILL, s.dref_off)
@@ -174,7 +184,6 @@ class Allocation:
                         did_spill = True
 
                 elif d.is_deref() and self.is_memory(AsmVar(d.name), colors):
-                        print "DEREF"
                         # double deref
                         t_name = "%d" % self.current_temp
                         t_var = AsmVar(t_name, SPILL)

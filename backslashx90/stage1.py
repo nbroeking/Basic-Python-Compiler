@@ -95,11 +95,8 @@ class Stage1:
 
         i = 0
         for elem in lst:
-            var = self.loose_flatten(elem);
-            if var is None:
-                self.buffer += [core.Assign( core.Deref(data_ptr,i), base_cov(elem) )]
-            else:
-                self.buffer += [core.Assign( core.Deref(data_ptr,i), core.Name(var) )]
+            var = self.flatten_to_var(elem);
+            self.buffer += [core.Assign( core.Deref(data_ptr,i), var )]
             i += 4
 
         self.buffer += [core.Assign(lst_name, core.Add(core.Name(lst_name), core.Const(3)))]
@@ -184,9 +181,6 @@ class Stage1:
         children = pyst.getChildren()
         lhs, rhs = (children[0], children[2])
         lhs_, rhs_ = base_cov(lhs), base_cov(rhs)
-
-        print "PYST",pyst,"|",children
-        print "RHS_CLASS",rhs.__class__
 
         if is_base(lhs) and is_base(rhs):
             var = self.tmpvar()
@@ -274,7 +268,6 @@ class Stage1:
     def loose_flatten_compare(self, pyst):
         #Restruc
         array = pyst.getChildren()
-        print "ARRAY ", array
 
         if len(array) <= 3:
             # this is the base case
@@ -309,8 +302,6 @@ class Stage1:
             current_and = pyast.And( (current_and, current_compare) )
             i += 2
         
-        print "CURRENT_CMP: ", current_compare
-        print "CURRENT_AND: ", current_and
         #Flatten New Tree
         return self.loose_flatten( current_and )
 
