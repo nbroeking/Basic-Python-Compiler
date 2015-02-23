@@ -224,7 +224,7 @@ class Stage2:
                         idx += 4
 
                     self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
-                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED))) #NOTE:This variable was marked as * 
+                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
 
 

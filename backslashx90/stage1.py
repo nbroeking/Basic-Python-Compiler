@@ -307,19 +307,35 @@ class Stage1:
 #Flatten Assignment
     def flatten_assign(self, pyst):
         if isinstance(pyst, pyast.Assign):
-            # if instance of assign, flatten the rhs
-            var = self.loose_flatten(pyst.getChildren()[1])
+            if isinstance(pyst.getChildren()[0], pyast.Subscript):
+                subscr = pyst.getChildren()[0]
+                children = subscr.getChildren()
+                lhs, rhs = (children[0], children[2])
 
-            # var = None if no temp var needed, or name of temp var
-            if var is None:
-                # already flat, convert from python ast -> stage1 ast
-                rhs = base_cov(pyst.getChildren()[1])
+                var = self.flatten_to_var(lhs)
+                rhs_flat = self.flatten_to_var(rhs)
+                to_assign = self.flatten_to_var(pyst.getChildren()[1])
+
+                retvar = self.tmpvar()
+
+                callfunc = core.CallFunc(core.Name("set_subscript"), [var, rhs_flat, to_assign])
+                self.buffer += [core.Assign(retvar, callfunc)]
+                return retvar
+
             else:
-                # rhs = name of var e.g. $1$
-                rhs = core.Name(var)
-
-            # append to the buffer an assignment
-            self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
+                # if instance of assign, flatten the rhs
+                var = self.loose_flatten(pyst.getChildren()[1])
+    
+                # var = None if no temp var needed, or name of temp var
+                if var is None:
+                    # already flat, convert from python ast -> stage1 ast
+                    rhs = base_cov(pyst.getChildren()[1])
+                else:
+                    # rhs = name of var e.g. $1$
+                    rhs = core.Name(var)
+    
+                # append to the buffer an assignment
+                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
         else:
             raise Exception("Expected an Assign instance")
 

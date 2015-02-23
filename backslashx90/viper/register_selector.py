@@ -145,7 +145,6 @@ class Allocation:
     def pass_spill( self, asm_tree, colors ):
         did_spill = False
    
-        # TODO spill broken for dereferences
         ret_list = []
         for instr in asm_tree:
             inst_class = instr.__class__
@@ -154,13 +153,36 @@ class Allocation:
                isinstance(instr, Shrl) or isinstance(instr, Cmovzl) or \
                isinstance(instr, Andl) or isinstance(instr, Orl):
 
-                s, d = instr.lhs, instr.rhs;
+                s, d = instr.lhs, instr.rhs; # asm vars
                 if self.is_memory(s,colors) and self.is_memory(d,colors):
                     t_slot = AsmVar("%d" % self.current_temp, SPILL )
                     self.current_temp += 1
                     ret_list.append( Movl(s, t_slot) )
                     ret_list.append( inst_class(t_slot, d) )
                     did_spill = True
+
+                elif s.is_deref() and self.is_memory(AsmVar(s.name), colors):
+                        print "DEREF"
+                        t_name = "%d" % self.current_temp
+                        t_var = AsmVar(t_name, SPILL)
+                        t_deref = AsmVar(t_name, SPILL, s.dref_off)
+                        self.current_temp += 1
+                        ret_list.append( Movl(AsmVar(s.name), t_var) )
+                        ret_list.append( inst_class(t_deref, d) )
+                        did_spill = True
+
+                elif d.is_deref() and self.is_memory(AsmVar(d.name), colors):
+                        print "DEREF"
+                        # double deref
+                        t_name = "%d" % self.current_temp
+                        t_var = AsmVar(t_name, SPILL)
+                        t_deref = AsmVar(t_name, SPILL, d.dref_off)
+                        self.current_temp += 1
+                        ret_list.append( Movl(AsmVar(d.name), t_var) )
+                        ret_list.append( inst_class(s, t_deref) )
+                        did_spill = True
+                      
+
                 else:
                     ret_list.append( instr )
 
@@ -276,6 +298,9 @@ class Allocation:
                         possible.remove( ret_map[neighbor] )
         
                 ret_map[node] = min(possible)
+                if not self.is_register(ret_map[node]):
+                    raise Exception("Too many variables marked as can't spill")
+
                 maxret = max( maxret, ret_map[node] )
     
         for node in mapping:
