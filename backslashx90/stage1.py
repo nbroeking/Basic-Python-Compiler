@@ -3,7 +3,10 @@
 # the current project.
 
 import compiler.ast as pyast
-import viper.core as core
+try:
+    import viper.core as core
+except:
+    import core as core
 
 # Detect if the node is the base case
 def is_base(pyst):

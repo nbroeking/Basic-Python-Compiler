@@ -1,4 +1,7 @@
-import viper.core as core
+try:
+    import viper.core as core
+except:
+    import core as core
 
 SPILL        = 0b1
 CALLER_SAVED = 0b10

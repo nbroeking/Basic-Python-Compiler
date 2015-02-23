@@ -8,6 +8,7 @@ test: ; cd runtime && make ; cd .. ; ./test.sh $(TEST_FLAGS) 2> /dev/null
 package:
 	mkdir -p package
 	cp *.py package/
+	cp viper/*.py package/
 	cp runtime/*.c package
 	cp runtime/*.h package
 	cd package && zip -r ../package.zip *

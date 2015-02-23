@@ -1,10 +1,18 @@
 # Create the Asm Tree and then do register selection 
 #
 #
-from viper.register_selector import allocate_registers
-from viper.AsmTree import *
-import viper.core as core
-from viper.AsmTypes import *
+
+try:
+    from viper.register_selector import allocate_registers
+    from viper.AsmTree import *
+    import viper.core as core
+    from viper.AsmTypes import *
+
+except:
+    from register_selector import allocate_registers
+    from AsmTree import *
+    import core as core
+    from AsmTypes import *
 
 #Perform Register Selection
 def selection(ast):
@@ -75,7 +83,9 @@ class Stage2:
 #Select Instructions
     def instructionSelection(self, lst):
         for ast in lst:
-            if isinstance(ast, core.Assign):
+            if isinstance(ast, core.Comment):
+                self.addAsm( Comment(ast.comment) )
+            elif isinstance(ast, core.Assign):
                 self.addAsm( Comment("End Instruction \n\n")) 
                 self.addAsm( Comment("*" + str(ast)) )
                 name = ast.name

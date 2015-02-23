@@ -6,11 +6,19 @@ class WTFException(Exception):
     def __init__(self, s):
             super(self, Exception).__init__(s)
 
+
 class CoreNode:
     def _to_str(self):
         return ""
     def __str__(self):
         return self._to_str()
+
+class Comment(CoreNode):
+    def __init__(self, comment):
+        self.comment = comment
+
+    def _to_str(self):
+        return "/* %s */" % (self.comment)
 
 class Assign(CoreNode):
     def __init__(self, name, rhs):

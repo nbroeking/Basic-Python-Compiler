@@ -8,7 +8,12 @@ import compiler.ast as pyast
 import compiler as comp
 import stage1 as flat
 import stage2 as reg
-import viper.core as core
+
+try:
+    import viper.core as core
+except:
+    import core as core
+
 import sys
 
 def main( argv):

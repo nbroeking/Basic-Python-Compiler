@@ -1,7 +1,11 @@
 #This class Allocates Registers
 
 from AsmTree import *
-from viper.AsmTypes import SPILL, CALLER_SAVED, RAW, CONSTANT, AsmVar
+
+try:
+    from viper.AsmTypes import *
+except:
+    from AsmTypes import *
 
 REG_MAP = { 0: "%eax", 1: "%ebx", 2: "%ecx", 3: "%edx",
             4: "%edi", 5: "%esi" }
@@ -152,6 +156,7 @@ class Allocation:
             if isinstance(instr, Movl) or isinstance(instr, Addl) or \
                isinstance(instr, Xorl) or isinstance(instr, Shll) or \
                isinstance(instr, Shrl) or isinstance(instr, Cmovzl) or \
+               isinstance(instr, Cmpl) or isinstance(instr, Testl) or \
                isinstance(instr, Andl) or isinstance(instr, Orl):
 
                 s, d = instr.lhs, instr.rhs; # asm vars
@@ -189,6 +194,20 @@ class Allocation:
                     ret_list.append( inst_class(t_slot, d) )
                     ret_list.append( Comment("End spill memory %s" % instr) )
                     did_spill = True
+
+                elif isinstance(instr, Cmovzl) and self.is_memory(d, colors):
+                    t_slot = AsmVar("%d" % self.current_temp, SPILL )
+                    self.current_temp += 1
+
+                    ret_list.append( Comment("Spilling cmovzl %s" % instr) )
+                    ret_list.append( Movl(d, t_slot) )
+                    ret_list.append( Cmovzl(s, t_slot) )
+                    ret_list.append( Movl(t_slot, d) )
+                    ret_list.append( Comment("End cmovzl") )
+
+                    did_spill = True
+                    # cmovzl cannot go to a register
+
                       
 
                 else:
@@ -306,8 +325,6 @@ class Allocation:
                         possible.remove( ret_map[neighbor] )
         
                 ret_map[node] = min(possible)
-                if not self.is_register(ret_map[node]):
-                    raise Exception("Too many variables marked as can't spill")
 
                 maxret = max( maxret, ret_map[node] )
     
