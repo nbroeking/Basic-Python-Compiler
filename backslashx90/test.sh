@@ -1,6 +1,9 @@
 #!/bin/bash
 os=`uname`
-input="10
+input="0
+0
+2
+10
 1
 -5
 -2

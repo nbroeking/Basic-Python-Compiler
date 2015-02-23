@@ -216,7 +216,9 @@ class Stage2:
 
                 elif isinstance(op, core.Neg):
                     self.AsmTree.append(Movl(self.to_base_asm(op.rhs), AsmVar( name )))
+                    self.AsmTree.append(Shrl(var_const("2"), AsmVar(name)))
                     self.AsmTree.append(Neg(AsmVar( name )))
+                    self.AsmTree.append(Shll(var_const("2"), AsmVar(name)))
 
                 elif isinstance(op, core.Const):
                     self.AsmTree.append(Movl(self.to_base_asm(op), AsmVar( name ) ))
@@ -249,7 +251,7 @@ class Stage2:
                 tmpv = var_spill(self.tmpvar())
 
                 self.addAsm( Movl(self.to_base_asm(cond), tmpv) )
-                self.addAsm( Andl(var_const("0xFFFFFFFC"), tmpv) )
+                self.addAsm( Testl(tmpv, tmpv) )
 
                 old_asm = self.AsmTree
                 self.AsmTree = []

@@ -1,7 +1,7 @@
 files=$(find tests -name '*.py' -and -not -name 'onsite*')
 
 for i in $files ; do
-    infile=${i/py/in}
+    infile=$(echo $i | sed 's/py$/in/')
     if [ ! -e $infile ] ; then
         echo -e '1\n2\n3\n4\n5\n6' > $infile
     fi

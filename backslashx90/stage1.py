@@ -119,13 +119,16 @@ class Stage1:
     def loose_flatten_if(self, pyst):
         cond = self.flatten_to_var( pyst.getChildren()[0] )
 
+        real_cond = self.tmpvar()
+        self.addAsm(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond])))
+
         then_nodes = pyst.getChildren()[1]
         if pyst.getChildren()[2] is None:
             else_nodes = []
         else:
             else_nodes = flatten(pyst.getChildren()[2])
 
-        self.addAsm(core.If(cond, flatten(then_nodes), else_nodes))
+        self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes), else_nodes))
         return None
         
     def loose_flatten_ifexpr(self, pyst):
@@ -147,8 +150,8 @@ class Stage1:
         self.addAsm( core.Assign(dct_name, core.CallFunc(core.Name("create_dict"), [])) )
         self.addAsm( core.Assign(dct_name, core.Add(core.Name(dct_name), core.Const(3))) )
 
-        i = len(dct_children)-2
-        while i >= 0:
+        i = 0
+        while i < len(dct_children):
             key_var = self.loose_flatten(dct_children[i])
             val_var = self.loose_flatten(dct_children[i+1])
 
@@ -157,7 +160,7 @@ class Stage1:
 
             self.addAsm( 
                 core.Assign(self.tmpvar(), core.CallFunc(core.Name("set_subscript"), [core.Name(dct_name), key_arg, val_arg])) )
-            i -= 2
+            i += 2
 
         return dct_name
 
@@ -279,6 +282,10 @@ class Stage1:
             op = array[1]
             rhs = array[2]
 
+            if op == "!=":
+                expanded = pyast.Not( pyast.Compare(array[0], ["==", array[2]]) )
+                return self.loose_flatten(expanded)
+
             lhs_flat = self.flatten_to_var(lhs)
             rhs_flat = self.flatten_to_var(rhs)
 
@@ -315,9 +322,9 @@ class Stage1:
                 children = subscr.getChildren()
                 lhs, rhs = (children[0], children[2])
 
+                to_assign = self.flatten_to_var(pyst.getChildren()[1])
                 var = self.flatten_to_var(lhs)
                 rhs_flat = self.flatten_to_var(rhs)
-                to_assign = self.flatten_to_var(pyst.getChildren()[1])
 
                 retvar = self.tmpvar()
 
@@ -399,7 +406,7 @@ class Stage1:
             return base_cov(pyst)
 
         else:
-            raise Exception("Unexpected " + pyst.__class__.__name__)
+            self.loose_flatten(pyst)
 
         return self.buffer
 
