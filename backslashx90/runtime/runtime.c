@@ -701,6 +701,7 @@ static pyobj subscript(big_pyobj* c, pyobj key)
   case DICT:
     return *dict_subscript(c->u.d, key);
   default:
+    printf("%x RIGHT HERE NICS DEBUGING IS THE SHIT\n", c->tag);
     printf("error in set subscript, not a list or dictionary\n");
     assert(0);
   }

@@ -76,6 +76,8 @@ class Stage2:
     def instructionSelection(self, lst):
         for ast in lst:
             if isinstance(ast, core.Assign):
+                self.addAsm( Comment("End Instruction \n\n")) 
+                self.addAsm( Comment("*" + str(ast)) )
                 name = ast.name
                 op = ast.rhs
                 print "TEST: %s %s" % (name.__class__, op.__class__)

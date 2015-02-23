@@ -41,6 +41,9 @@ class AsmVar:
             if self.dref_off is not None:
                 self.mask |= SPILL | MEMORY
 
+    def is_same(self, oth):
+        return self.name == oth.name and self.dref_off == oth.dref_off
+
     def to_basic(self):
         return AsmVar(self.name, self.mask)
 

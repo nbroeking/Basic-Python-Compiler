@@ -74,7 +74,7 @@ def allocate_registers( asm_tree ):
 
         print "------COLORS AFTER SIMPLE SUB---"
         for x in colors:
-            print x, " = ", colors[x]
+            print x, " = ", colors[x], "=", alloc.get_mapping(colors[x])
     
         print "--------\n\n"
         asm_tree = list(alloc.remove_trivial(asm_tree))
@@ -108,7 +108,6 @@ class Allocation:
     
     #Turns the Var into a asm
     def to_asm( self, var, colors ):
-        print "VAR " + str(var)
         if var.isConstant(): # constant
             return var
         if var.isRaw(): # constant
@@ -125,8 +124,10 @@ class Allocation:
     def remove_trivial( self, asm_tree ):
         for instr in asm_tree:
             if not (isinstance(instr, Movl) and
-                    instr.lhs.getName() == instr.rhs.getName()):
+                    instr.lhs.is_same(instr.rhs)):
                     yield instr
+            else:
+                print "removed %s" % instr 
     
     #Checks if the color is a register
     def is_register( self, color ):
@@ -154,21 +155,17 @@ class Allocation:
                isinstance(instr, Andl) or isinstance(instr, Orl):
 
                 s, d = instr.lhs, instr.rhs; # asm vars
-                if self.is_memory(s,colors) and self.is_memory(d,colors):
-                    t_slot = AsmVar("%d" % self.current_temp, SPILL )
-                    self.current_temp += 1
-                    ret_list.append( Movl(s, t_slot) )
-                    ret_list.append( inst_class(t_slot, d) )
-                    did_spill = True
 
-                elif s.is_deref() and self.is_memory(AsmVar(s.name), colors):
+                if s.is_deref() and self.is_memory(AsmVar(s.name), colors):
                         print "DEREF"
                         t_name = "%d" % self.current_temp
                         t_var = AsmVar(t_name, SPILL)
                         t_deref = AsmVar(t_name, SPILL, s.dref_off)
                         self.current_temp += 1
+                        ret_list.append( Comment("Spilling source Deref %s" % instr) )
                         ret_list.append( Movl(AsmVar(s.name), t_var) )
                         ret_list.append( inst_class(t_deref, d) )
+                        ret_list.append( Comment(" end Deref") )
                         did_spill = True
 
                 elif d.is_deref() and self.is_memory(AsmVar(d.name), colors):
@@ -178,9 +175,20 @@ class Allocation:
                         t_var = AsmVar(t_name, SPILL)
                         t_deref = AsmVar(t_name, SPILL, d.dref_off)
                         self.current_temp += 1
+                        ret_list.append( Comment("Spilling destination Deref %s" % instr) )
                         ret_list.append( Movl(AsmVar(d.name), t_var) )
                         ret_list.append( inst_class(s, t_deref) )
+                        ret_list.append( Comment(" end Deref") )
                         did_spill = True
+
+                elif self.is_memory(s,colors) and self.is_memory(d,colors):
+                    t_slot = AsmVar("%d" % self.current_temp, SPILL )
+                    self.current_temp += 1
+                    ret_list.append( Comment("Spilling memory %s" % instr) )
+                    ret_list.append( Movl(s, t_slot) )
+                    ret_list.append( inst_class(t_slot, d) )
+                    ret_list.append( Comment("End spill memory %s" % instr) )
+                    did_spill = True
                       
 
                 else:

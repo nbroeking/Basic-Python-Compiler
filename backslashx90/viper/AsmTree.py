@@ -78,6 +78,19 @@ class Cmovzl:
 
     def _to_str(self):
         return "cmovzl %s, %s" % (self.lhs, self.rhs)
+
+class Comment:
+    def __init__(self, comment):
+        self.comment = comment
+
+    def __str__(self): return self._to_str()
+
+    def _to_str(self):
+        return "// %s" %self.comment
+
+    def map_vars(self, _):
+        pass
+
 #Add
 class Label:
     def __init__(self, name):
