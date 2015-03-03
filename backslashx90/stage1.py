@@ -79,9 +79,11 @@ class Stage1:
         self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
         return var
 
+    #Adds an assemply node to the list of instructions
     def addAsm(self, asm_node):
         self.buffer.append(asm_node)
 
+    #Flatten a List
     def loose_flatten_list(self, pyst):
         lst = pyst.getChildren()
 
@@ -102,7 +104,8 @@ class Stage1:
         self.buffer += [core.Assign(lst_name, core.Add(core.Name(lst_name), core.Const(3)))]
 
         return lst_name
-
+    
+    
     def try_var(self, varname, orig):
         if varname is None:
             return base_cov(orig)
@@ -112,7 +115,8 @@ class Stage1:
         tmp = self.loose_flatten(orig)
         ret = self.try_var(tmp, orig)
         return ret
-        
+    
+    #Loose flatten an if    NOTE: NOt needed
     def loose_flatten_if(self, pyst):
         cond = self.flatten_to_var( pyst.getChildren()[0] )
 
@@ -128,6 +132,7 @@ class Stage1:
         self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes), else_nodes))
         return None
         
+    #flatten an if expression
     def loose_flatten_ifexpr(self, pyst):
         cond = pyst.getChildren()[0]
         var = self.tmpvar()
@@ -139,7 +144,7 @@ class Stage1:
         self.loose_flatten_if(new_if)
         return var
 
-
+    #Flatten a dictionary
     def loose_flatten_dict(self, pyst):
         dct_children = pyst.getChildren()
         dct_name = self.tmpvar()
@@ -161,22 +166,25 @@ class Stage1:
 
         return dct_name
 
+    #Flatten a boolean 
     def loose_flatten_bool_and(self, pyst):
         var = self.unbasecov(self.flatten_to_var(pyst.getChildren()[0]))
         if_stmt = pyast.IfExp(var, pyst.getChildren()[1], var)
         return self.loose_flatten_ifexpr(if_stmt)
 
+    #COnvert Types
     def unbasecov(self, viperast):
         if isinstance(viperast, core.Const):
             return pyast.Const(viperast.raw >> 2)
         elif isinstance(viperast, core.Name):
             return pyast.Name(viperast.name)
-
+    #Flatten a bool
     def loose_flatten_bool_or(self, pyst):
         var = self.unbasecov(self.flatten_to_var(pyst.getChildren()[0]))
         if_stmt = pyast.IfExp(var, var, pyst.getChildren()[1])
         return self.loose_flatten_ifexpr(if_stmt)
 
+    #Flatten a subscript
     def loose_flatten_subscript(self, pyst):
         children = pyst.getChildren()
         lhs, rhs = (children[0], children[2])
@@ -265,6 +273,7 @@ class Stage1:
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
 
+    #Losse Flattens a comparison
     def loose_flatten_compare(self, pyst):
         #Restruc
         array = pyst.getChildren()
@@ -305,7 +314,7 @@ class Stage1:
         #Flatten New Tree
         return self.loose_flatten( current_and )
 
-#Flatten Assignment
+    #Flatten Assignment
     def flatten_assign(self, pyst):
         if isinstance(pyst, pyast.Assign):
             if isinstance(pyst.getChildren()[0], pyast.Subscript):
