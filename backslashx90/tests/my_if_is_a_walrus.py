@@ -1,4 +1,1 @@
-if (1 if input() else 3):
-    print 2
-else:
-    print 3
+print 5 if (1 if input() else 3) else 2

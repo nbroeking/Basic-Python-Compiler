@@ -56,20 +56,3 @@ i = 1 if (10 == 7 and [1,2,3] + 5) or not (i == 5) else 3 if [1,2,3][2 if 2 else
 print i
 
 print [1,2][{3:1}[{8: 3}[8]]]
-
-false = False
-False = True
-True = False
-
-print False
-
-print (False and ({2: 3, 8: 2}[2 + (3 and 6 or [1]+2)] if True else 0) or 1 + {5: 2})
-
-False = [1,3]
-
-print False + [2, 3]
-
-True = false
-
-x = 1 + False if True else 3 + True
-print x

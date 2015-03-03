@@ -2,10 +2,7 @@ x = 1
 y = 2
 z = [1,2,4,5,6,7]
 
-if x == y:
-    print 90
-else:
-    print 78
+print 90 if x == y else 78
 
 u = x + z if x == y else 1
 print u
@@ -18,10 +15,5 @@ print o
 
 xx = [67,68,69]
 yy = xx
-if xx == yy:
-    print 987
-
-if yy == [1] == xx + 2:
-    print 0
-else:
-    print 1
+print 987 if xx == yy else 5
+print 0 if yy == [1] == xx + 2 else 1

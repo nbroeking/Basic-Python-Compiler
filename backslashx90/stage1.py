@@ -149,8 +149,8 @@ class Stage1:
 
         i = 0
         while i < len(dct_children):
-            key_var = self.loose_flatten(dct_children[i])
             val_var = self.loose_flatten(dct_children[i+1])
+            key_var = self.loose_flatten(dct_children[i])
 
             key_arg = core.Name(key_var) if not key_var is None else base_cov(dct_children[i])
             val_arg = core.Name(val_var) if not val_var is None else base_cov(dct_children[i+1])

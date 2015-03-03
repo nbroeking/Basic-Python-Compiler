@@ -1,2 +1,2 @@
-x = True == False == [] + 1
+x = True == False and False == [] + 1
 print x
