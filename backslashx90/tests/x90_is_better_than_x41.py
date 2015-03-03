@@ -1,4 +1,4 @@
-True = False
+true = False
 
-if True is False:
-    print True
+if true is False:
+    print true

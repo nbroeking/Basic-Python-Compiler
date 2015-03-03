@@ -1,4 +1,2 @@
-False = True 
-False = False +- 2
-print False
+print True +- 2
 

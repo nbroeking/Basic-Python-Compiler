@@ -1,5 +1,1 @@
-True = False
-if True:
-    print 1
-else:
-    print 0
+print 1 if True else False
