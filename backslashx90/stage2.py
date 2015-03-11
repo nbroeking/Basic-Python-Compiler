@@ -191,7 +191,7 @@ class Stage2:
                     self.addAsm(Movl(self.to_base_asm(op.lhs), t1))
                     self.addAsm(Movl(self.to_base_asm(op.rhs), t2))
                     self.addAsm(Movl(var_const("1"), t3))
-                    self.addAsm(Xorl(vname, vname))
+                    self.addAsm(Movl(var_raw("$0"), vname))
 
                     self.addAsm(Cmpl(t1, t2))
                     self.addAsm(Cmovzl(t3, vname))

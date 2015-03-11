@@ -38,7 +38,7 @@ print y is x[1]
 print y is x[0]
 print y == x[2] and x[2] == [1] + 2
 print 3 == x[2] and x[2] == 1 + x[0][0][0][1]
-print x is y and y == x
+# print x is y and y == x
 
 print [1,2,3][True]
 {input(): 3}
