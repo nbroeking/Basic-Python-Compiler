@@ -9,9 +9,9 @@ def printTree(ast, fname):
     pp.printTree(ast)
 
 try:
-    from viper.AsmTree import Label
+    from viper.AsmTree import Label, Raw
 except:
-    from AsmTree import Label
+    from AsmTree import Label, Raw
 
 
 class printer:
@@ -36,9 +36,10 @@ class printer:
         self.emit( '    leave' )
         self.emit( '    ret' )
 
-        # self.emit( '.globl main' );
-        # self.emit( '.type main, @function' );
-        # self.emit( 'main:' );
+        self.emit( '.globl main' );
+        self.emit( '.type main, @function' );
+        self.emit( 'main:' );
+        self.emit( '   jmp py_main' );
         
         # self.preamble()
         #self.emit( '    subl $%s, %%esp' % (size,)  );
@@ -47,7 +48,7 @@ class printer:
 
     def printTree(self, lst):
         for instr in lst:
-            if isinstance(instr, Label):
+            if isinstance(instr, (Label,Raw)):
                 self.emit(instr._to_str())
             else:
                 self.emit('    ' + instr._to_str())

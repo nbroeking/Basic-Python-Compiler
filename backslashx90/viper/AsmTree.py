@@ -361,6 +361,16 @@ class Ret:
     def _to_str(self):
         return "ret"
 
+class Raw:
+    def __init__(self, string):
+        self.string = string
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def _to_str(self):
+        return self.string
+
 class Leave:
     def __init(self):
         pass

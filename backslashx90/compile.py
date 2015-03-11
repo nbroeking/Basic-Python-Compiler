@@ -54,6 +54,7 @@ def main( argv):
 
 #Flatten
     defs = preproc.preprocess_functions(ast)
+    defsmap = dict([(i.name,i) for i in defs])
 
     for fn in defs:
         flattened = flat.flatten(fn.get_ast(), True)

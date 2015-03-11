@@ -245,6 +245,21 @@ class Stage2:
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
 
+                elif isinstance(op, core.CallFunc):
+                    args = op.args
+                    n_bytes = 12 + (len(args) << 2)
+
+                    self.save_registers(n_bytes);
+
+                    idx = 0
+                    for i in args:
+                        self.AsmTree.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        idx += 4
+
+                    self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
+                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
+                    self.restore_registers(n_bytes)
+
 
             elif isinstance(ast, core.If):
                 cond = ast.cond
@@ -260,11 +275,11 @@ class Stage2:
                 old_asm = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(thens)
+                self.instructionSelection(thens, fn)
                 new_thens = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(elses)
+                self.instructionSelection(elses, fn)
                 new_elses = self.AsmTree
 
                 self.AsmTree = old_asm

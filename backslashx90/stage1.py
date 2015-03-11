@@ -74,7 +74,11 @@ class Stage1:
 
         # args are flat for sure 
         var = self.tmpvar()
-        self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
+        if var in ["input", "print"]:
+            # finally gave in
+            self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
+        else:
+            self.buffer += [core.Assign(var, core.CallClosure(base_cov(lhs), newargs))]
         return var
 
     #Adds an assemply node to the list of instructions
