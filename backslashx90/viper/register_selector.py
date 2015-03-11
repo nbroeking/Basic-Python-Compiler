@@ -21,11 +21,11 @@ def allocate_registers( asm_tree ):
     sets_asm = list(alloc.liveness_analysis( asm_tree[:] ))
     sets_asm.reverse()
 
-    # print "------------- Liveness"
-    # for x in sets_asm:
-    #     print "%-40s %s" % x
+    print "------------- Liveness"
+    for x in sets_asm:
+        print "%-40s %s" % x
 
-    # print "-------------"
+    print "-------------"
 
     (_, sets) = zip( *sets_asm ) if len(sets_asm) > 0 else ([],[])
    
@@ -222,6 +222,9 @@ class Allocation:
                 else:
                     ret_list.append( instr )
 
+                # if did_spill:
+                #     print "SPILL -- " + str(instr)
+
             elif isinstance( instr, If ):
                 then_asm = self.pass_spill(instr.then_stmts, colors)
                 else_asm = self.pass_spill(instr.else_stmts, colors)
@@ -377,8 +380,7 @@ class Allocation:
     
         # yield (None, set())
         for instr in reverse_asm_tree:
-            if isinstance(instr, Movl) or \
-               isinstance(instr, Cmovzl):
+            if isinstance(instr, Movl):
                 src = instr.lhs
                 dest = instr.rhs
     
@@ -390,12 +392,13 @@ class Allocation:
     
                 if self.is_var(src):
                     current_set.add( src.to_basic() )
-        
+
             elif isinstance(instr, Addl) or \
                  isinstance(instr, Andl) or \
                  isinstance(instr, Cmpl) or \
                  isinstance(instr, Orl) or \
                  isinstance(instr, Xorl) or \
+                 isinstance(instr, Cmovzl) or \
                  isinstance(instr, Shll) or \
                  isinstance(instr, Shrl):
                 rhs = instr.rhs
