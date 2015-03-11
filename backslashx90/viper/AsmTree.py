@@ -360,3 +360,13 @@ class Ret:
 
     def _to_str(self):
         return "ret"
+
+class Leave:
+    def __init(self):
+        pass
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def _to_str(self):
+        return "leave"

@@ -4,6 +4,7 @@
 # Team: x90
 
 import printer
+import function_comb as preproc
 import compiler.ast as pyast
 import compiler as comp
 import stage1 as flat
@@ -52,15 +53,24 @@ def main( argv):
             outfile=outfile[:-3]+".s"
 
 #Flatten
-    flattened = flat.flatten(ast, True)
-    for n in flattened:
-        print(n._to_str())
+    defs = preproc.preprocess_functions(ast)
+
+    for fn in defs:
+        flattened = flat.flatten(fn.get_ast(), True)
+        fn.set_ast(flattened)
 
 #Register Allocation
-    tree = reg.selection(flattened);
 
+    for fn in defs:
+        print "--------", fn.name, "----------"
+        tree = reg.selection(fn.get_ast(), fn);
+        fn.set_ast(tree)
+
+    total = []
+    for fn in defs:
+        total += fn.build_final_asm_tree()
 #Print the ASM tree to a file
-    printer.output(tree, outfile)
+    printer.output(total, outfile)
 
 if __name__ == "__main__":
     main(sys.argv)

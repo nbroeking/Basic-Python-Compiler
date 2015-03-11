@@ -6,6 +6,7 @@ class WTFException(Exception):
     def __init__(self, s):
             super(self, Exception).__init__(s)
 
+import compiler.ast as pyast
 
 class CoreNode:
     def _to_str(self):
@@ -118,12 +119,33 @@ class Name(CoreNode):
 # call a function with arguments
 class CallFunc(CoreNode):
     def __init__(self, lhs, args):
+        if isinstance(lhs, pyast.Name):
+            raise Exception("Python sucks!!")
+        for i in args:
+            if isinstance(i, pyast.Name):
+                raise Exception("Python sucks!!")
+
         self.lhs = lhs
         self.args = args
         self.children = list(self.args)
 
     def _to_str(self):
         return self.lhs._to_str() + "(" + ",".join([i._to_str() for i in self.args]) + ")"
+
+class CallClosure(CoreNode):
+    def __init__(self, lhs, args):
+        if isinstance(lhs, pyast.Name):
+            raise Exception("Python sucks!!")
+        for i in args:
+            if isinstance(i, pyast.Name):
+                raise Exception("Python sucks!!")
+
+        self.lhs = lhs
+        self.args = args
+        self.children = list(self.args)
+
+    def _to_str(self):
+        return "*" + self.lhs._to_str() + "(" + ",".join([i._to_str() for i in self.args]) + ")"
 
 class Deref(CoreNode):
     def __init__(self, arg, offset):
@@ -140,6 +162,14 @@ class Neg(CoreNode):
 
     def _to_str(self):
         return "- " + self.rhs._to_str()
+
+class Return(CoreNode):
+    def __init__(self, rhs):
+        self.rhs = rhs;
+        self.children = [rhs];
+
+    def _to_str(self):
+        return "return " + self.rhs._to_str()
 
 class Print(CoreNode):
     def __init__(self, rhs):

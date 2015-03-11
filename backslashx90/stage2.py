@@ -15,9 +15,9 @@ except:
     from AsmTypes import *
 
 #Perform Register Selection
-def selection(ast):
+def selection(ast, fn):
     st2 = Stage2();
-    return st2.assemble(ast);
+    return st2.assemble(ast, fn);
 
 #The Register Selection Object
 class Stage2:
@@ -38,8 +38,8 @@ class Stage2:
         return ret
 
 #Create the Asm tree and then Allocate Registers
-    def assemble(self, ast):
-        self.instructionSelection(ast);
+    def assemble(self, ast, fn):
+        self.instructionSelection(ast, fn);
         print "-------- ASM TREE BEFORE REG"
         for i in self.AsmTree:
             print ("%s" % i._to_str())
@@ -81,7 +81,7 @@ class Stage2:
         
 
 #Select Instructions
-    def instructionSelection(self, lst):
+    def instructionSelection(self, lst, fn):
         for ast in lst:
             if isinstance(ast, core.Comment):
                 self.addAsm( Comment(ast.comment) )
@@ -212,6 +212,11 @@ class Stage2:
                 elif isinstance(op, core.Add):
                     self.AsmTree.append(Movl(self.to_base_asm(op.lhs), AsmVar(name)))
                     self.AsmTree.append(Addl(self.to_base_asm(op.rhs), AsmVar(name)))
+
+                elif isinstance(op, core.Return):
+                    rhs = op.rhs
+                    self.AsmTree.append(Movl(self.to_base_asm(rhs), var_raw("%eax")))
+                    self.AsmTree.append(Jmp(".%s_ret", fn.name))
 
                 elif isinstance(op, core.Neg):
                     self.AsmTree.append(Movl(self.to_base_asm(op.rhs), AsmVar( name )))

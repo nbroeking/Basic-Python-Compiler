@@ -1,6 +1,9 @@
 # this module is the spec of the intermediate
 # language ast that implements the spec for
 # the current project.
+#
+# This module is the module that contains our flattener
+# for the compiler
 
 import compiler.ast as pyast
 try:
@@ -67,16 +70,11 @@ class Stage1:
         lhs = lst[0]
         args = lst[1:]
 
-        # flatten the arguments
-        for i in range(len(args)):
-            if not is_base(args[i]):
-                var = self.loose_flatten(args[i])
-                argsp = args[0:i] + (pyast.Name(var),) + args[i+1:]
-                return self.loose_flatten(pyast.CallFunc(lhs, argsp, None, None))
+        newargs = [self.flatten_to_var(i) for i in args]
 
         # args are flat for sure 
         var = self.tmpvar()
-        self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), args))]
+        self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
         return var
 
     #Adds an assemply node to the list of instructions
@@ -269,6 +267,11 @@ class Stage1:
 
         if isinstance(pyst, pyast.IfExp):
             return self.loose_flatten_ifexpr(pyst)
+
+        if isinstance(pyst, pyast.Return):
+            rhs = pyst.getChildren()[0]
+            rhs_prime = self.flatten_to_var(rhs)
+            return core.Return(rhs_prime)
 
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)

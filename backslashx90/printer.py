@@ -4,6 +4,15 @@ def output(ast, fname):
     Print = printer(fname);
     Print.output(ast);
 
+def printTree(ast, fname):
+    pp = printer(fname);
+    pp.printTree(ast)
+
+try:
+    from viper.AsmTree import Label
+except:
+    from AsmTree import Label
+
 
 class printer:
     def __init__(self, fileName):
@@ -27,22 +36,21 @@ class printer:
         self.emit( '    leave' )
         self.emit( '    ret' )
 
-        self.emit( '.globl main' );
-        self.emit( '.type main, @function' );
-        self.emit( 'main:' );
+        # self.emit( '.globl main' );
+        # self.emit( '.type main, @function' );
+        # self.emit( 'main:' );
         
-        self.preamble()
+        # self.preamble()
         #self.emit( '    subl $%s, %%esp' % (size,)  );
         
         self.printTree(ast)
-        
-        self.emit('    movl $0, %eax');
-        self.emit('    leave');
-        self.emit('    ret');
 
     def printTree(self, lst):
         for instr in lst:
-            self.emit('    ' + instr._to_str())
+            if isinstance(instr, Label):
+                self.emit(instr._to_str())
+            else:
+                self.emit('    ' + instr._to_str())
     def preamble(self):
         self.emit('    pushl %ebp');
         self.emit('    movl %esp, %ebp');
