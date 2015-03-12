@@ -14,6 +14,8 @@ except:
     import core as core
     from AsmTypes import *
 
+from function_comb import FnName
+
 #Perform Register Selection
 def selection(ast, fn):
     st2 = Stage2();
@@ -309,4 +311,6 @@ class Stage2:
                     var_raw_mem("12(%esp)"), AsmVar("%edx", RAW)))
                 self.AsmTree.append(Addl(
                     AsmVar("16", CONSTANT), AsmVar("%esp", RAW)))
+
+            raise Exception("Unexpected %s in assemble" % ast.__class__)
 

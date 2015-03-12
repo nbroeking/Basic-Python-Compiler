@@ -60,6 +60,11 @@ def main( argv):
         flattened = flat.flatten(fn.get_ast(), True)
         fn.set_ast(flattened)
 
+        print "Fattened: %s {" % fn.name
+        for i in flattened:
+            print "    " + str(i)
+        print "}\n"
+
 #Register Allocation
 
     for fn in defs:

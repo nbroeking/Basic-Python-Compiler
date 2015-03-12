@@ -147,6 +147,13 @@ class CallClosure(CoreNode):
     def _to_str(self):
         return "*" + self.lhs._to_str() + "(" + ",".join([i._to_str() for i in self.args]) + ")"
 
+class MakeClosure(CoreNode):
+    def __init__(self, name):
+        self.name = name
+
+    def _to_str(self):
+        return "closure(%s)" % self.name
+
 class Deref(CoreNode):
     def __init__(self, arg, offset):
         self.arg = arg

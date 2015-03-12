@@ -11,10 +11,11 @@ try:
 except:
     import core as core
 
+from function_comb import FnName
+
 # Detect if the node is the base case
 def is_base(pyst):
-    return isinstance(pyst, pyast.Const) or \
-           isinstance(pyst, pyast.Name)
+    return isinstance(pyst, (pyast.Const, pyast.Name))
 
 #Convert Base Class to Value
 def base_cov(pyst):
@@ -71,6 +72,7 @@ class Stage1:
         args = lst[1:]
 
         newargs = [self.flatten_to_var(i) for i in args]
+        lhs_prime = self.flatten_to_var(lhs)
 
         # args are flat for sure 
         var = self.tmpvar()
@@ -78,7 +80,7 @@ class Stage1:
             # finally gave in
             self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
         else:
-            self.buffer += [core.Assign(var, core.CallClosure(base_cov(lhs), newargs))]
+            self.buffer += [core.Assign(var, core.CallClosure(lhs_prime, newargs))]
         return var
 
     #Adds an assemply node to the list of instructions
@@ -245,6 +247,11 @@ class Stage1:
         if isinstance(pyst, pyast.Compare):
             return self.loose_flatten_compare(pyst)
 
+        if isinstance(pyst, FnName):
+            tmp = self.tmpvar()
+            self.buffer.append( core.Assign(tmp, core.MakeClosure(pyst.name)) )
+            return tmp
+
         if isinstance(pyst, pyast.Not):
             rhs = pyst.getChildren()[0]
             if is_base( rhs ):
@@ -275,7 +282,8 @@ class Stage1:
         if isinstance(pyst, pyast.Return):
             rhs = pyst.getChildren()[0]
             rhs_prime = self.flatten_to_var(rhs)
-            return core.Return(rhs_prime)
+            self.buffer += [core.Return(rhs_prime)]
+            return None
 
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
