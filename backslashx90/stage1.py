@@ -67,9 +67,9 @@ class Stage1:
                 return self.loose_flatten(pyst.__class__((lhs, pyast.Name(var))))
 
     def loose_flatten_func(self, pyst):
-        lst = pyst.getChildNodes();
+        lst = pyst.getChildren();
         lhs = lst[0]
-        args = lst[1:]
+        args = lst[1:-2]
 
         newargs = [self.flatten_to_var(i) for i in args]
         lhs_prime = self.flatten_to_var(lhs)
@@ -248,6 +248,7 @@ class Stage1:
             return self.loose_flatten_compare(pyst)
 
         if isinstance(pyst, FnName):
+            print "WE MADE IT TO THE FNNAME WOOOOOOOOOOOOO" + pyst.name + "\n\n\n\n\n\n\n\n" 
             tmp = self.tmpvar()
             self.buffer.append( core.Assign(tmp, core.MakeClosure(pyst.name)) )
             return tmp

@@ -520,8 +520,8 @@ static pyobj* list_subscript(list ls, pyobj n)
     else if (0 <= ls.len + i && ls.len + i < ls.len)
       return &(ls.data[ls.len + i]);
     else {
-      printf("ERROR: list_nth index larger than list");
-      exit(1);
+      printf("ERROR: list_nth (%d) index larger than list (%d)\n", ((int)n)/4, ls.len);
+      assert(0);
     }
   }
   case BOOL_TAG: {

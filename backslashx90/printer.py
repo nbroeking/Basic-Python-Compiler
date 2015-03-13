@@ -48,6 +48,7 @@ class printer:
         self.emit( '    orl  $3, %eax' )
         self.emit( '    movl %eax, (%esp)' )
         self.emit( '    call ' + mangle("", "main") );
+        self.emit( '    movl $0, %eax' )
         self.emit( '    leave' )
         self.emit( '    ret' )
         self.emit( '' )

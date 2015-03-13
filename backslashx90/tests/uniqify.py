@@ -14,6 +14,6 @@ def another():
 
 x = 4
 print x
-y()
+another()
 another()
 print x

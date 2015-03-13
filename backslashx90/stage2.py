@@ -97,7 +97,7 @@ class Stage2:
             self.addAsm( Movl(var_const(str(v)), var_raw("4(%esp)")) )
             self.addAsm( Movl(myenv, var_raw("(%esp)")) )
             self.addAsm( Call("get_subscript") )
-            self.addAsm( Movl(var_raw("%eax"), AsmVar(k)) )
+            self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
         self.restore_registers(20)
 
         for arg in myfunction.args:
@@ -156,20 +156,23 @@ class Stage2:
                     env = var_caller_saved(self.tmpvar())
 
                     self.save_registers(20)
-                    self.addAsm( Movl(var_const(str(l)), var_raw("(%esp)")) )
+                    self.addAsm( Movl(var_const(str(l*4)), var_raw("(%esp)")) )
                     self.addAsm( Call("create_list") )
+                    self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
                     self.addAsm( Movl(var_raw("%eax"), env) )
                     self.restore_registers(20)
 
                     self.save_registers(28)
                     self.addAsm( Movl(env, var_raw("(%esp)")) )
                     for (k, v) in free_vars.items():
-                        self.addAsm( Movl(AsmVar(k), var_raw("4(%esp)")) )
-                        self.addAsm( Movl(AsmVar(v), var_raw("8(%esp)")) )
+                        self.addAsm( Movl(var_const(str(v*4)), var_raw("4(%esp)")) )
+                        self.addAsm( Movl(AsmVar(k), var_raw("8(%esp)")) )
                         self.addAsm( Call("set_subscript") )
                     self.addAsm( Movl(var_const(fn_name), var_raw("(%esp)")) )
                     self.addAsm( Movl(env, var_raw("4(%esp)")) )
+                    self.addAsm( Orl(var_const("3"), var_raw("4(%esp)")) )
                     self.addAsm( Call("create_closure") )
+                    self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
                     self.addAsm( Movl(var_raw("%eax"), vname) )
                     self.restore_registers(28)
                 
@@ -305,8 +308,11 @@ class Stage2:
                         self.AsmTree.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
-                    self.AsmTree.append( Movl(AsmVar(op.lhs.name, 0, 4), var_raw_mem("0x%x(%%esp)" % idx)) )
-                    self.AsmTree.append(CallStar(AsmVar(op.lhs.name, 0, 0)))
+                    tmpname = self.tmpvar()
+                    self.addAsm( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
+                    self.addAsm( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
+                    self.AsmTree.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
+                    self.AsmTree.append(CallStar(AsmVar(tmpname, 0, 4)))
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
 
@@ -336,6 +342,9 @@ class Stage2:
 
                 self.addAsm( If( NOT_ZERO, new_thens, new_elses ) )
 
+            elif isinstance(ast, core.Return):
+                self.addAsm( Movl(self.to_base_asm(ast.val), var_raw("%eax")) )
+                self.addAsm( Jmp(".%s_ret" % fname) )
 
 
             elif isinstance(ast, core.Print):

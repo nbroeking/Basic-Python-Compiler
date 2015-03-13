@@ -171,12 +171,12 @@ class Neg(CoreNode):
         return "- " + self.rhs._to_str()
 
 class Return(CoreNode):
-    def __init__(self, rhs):
-        self.rhs = rhs;
-        self.children = [rhs];
+    def __init__(self, val):
+        self.val = val;
+        self.children = [val];
 
     def _to_str(self):
-        return "return " + self.rhs._to_str()
+        return "return " + self.val._to_str()
 
 class Print(CoreNode):
     def __init__(self, rhs):
