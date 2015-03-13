@@ -131,7 +131,7 @@ def to_defined_function(function_p, parent_name=""):
 
 def mangle(a_name, name_p):
     x = "x90_" + a_name + "_" + name_p
-    if x == "x90_main_0lambda":
+    if x == "x90_0lambda_1lambda":
         raise Exception()
     return x
 
@@ -262,7 +262,7 @@ def loose_preprocess_functions(pyast,a_name):
         mname = mangle(a_name, name)
         nonce += 1
         args = pyast.getChildren()[0]
-        (stmt, fns) = loose_preprocess_functions(pyast.getChildren()[2], name)
+        (stmt, fns) = loose_preprocess_functions(pyast.getChildren()[2], mname)
         stmt_p = ast.Stmt([ast.Return(stmt)])
         fn = (ast.Function(None, name, args, [], 0, None, stmt_p), fns)
 

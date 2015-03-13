@@ -165,7 +165,23 @@ class Allocation:
         ret_list = []
         for instr in asm_tree:
             inst_class = instr.__class__
-            if isinstance(instr, Movl) or isinstance(instr, Addl) or \
+            
+            if isinstance(instr, CallStar):
+                val = instr.val
+                if val.is_deref() and  self.is_memory(AsmVar(val.name), colors):
+                    # double deref
+                    t_name = "%dspill" % self.current_temp 
+                    self.current_temp += 1
+                    t_var = var_spill(t_name)
+                    ret_list.append( Comment("Spill CallStar") )
+                    ret_list.append( Movl(val, t_var) )
+                    ret_list.append( CallStar(t_var) )
+                    ret_list.append( Comment("End Spill CallStar") )
+                    did_spill = True
+                else:
+                    ret_list.append(instr)
+
+            elif isinstance(instr, Movl) or isinstance(instr, Addl) or \
                isinstance(instr, Xorl) or isinstance(instr, Shll) or \
                isinstance(instr, Shrl) or isinstance(instr, Cmovzl) or \
                isinstance(instr, Cmpl) or isinstance(instr, Testl) or \
