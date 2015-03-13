@@ -10,3 +10,4 @@ runTests
 *tmp*
 package
 test
+*.in
