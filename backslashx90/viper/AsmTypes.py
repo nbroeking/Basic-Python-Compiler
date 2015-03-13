@@ -13,6 +13,9 @@ def var_const( name ):
     return AsmVar( name, CONSTANT )
 
 def var_raw( name, flags=0 ):
+    if '(' in name and not (flags & MEMORY):
+        print "[WARN] - name (%s) contains deref but is not marked mem" % name
+        raise Exception()
     return AsmVar( name, RAW | flags )
 
 def var_raw_mem(name):

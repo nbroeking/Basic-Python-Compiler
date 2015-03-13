@@ -16,15 +16,15 @@ preamble = [
       Push(var_raw("%ebp"))
     , Movl(var_raw("%esp"), var_raw("%ebp"))
     , Subl(var_const("12"), var_raw("%esp"))
-    , Movl(var_raw("%ebx"), var_raw("(%esp)"))
-    , Movl(var_raw("%esi"), var_raw("4(%esp)"))
-    , Movl(var_raw("%edi"), var_raw("8(%esp)"))
+    , Movl(var_raw("%ebx"), var_raw_mem("(%esp)"))
+    , Movl(var_raw("%esi"), var_raw_mem("4(%esp)"))
+    , Movl(var_raw("%edi"), var_raw_mem("8(%esp)"))
 ]
 
 postamble = [
-      Movl(var_raw("(%esp)" ), var_raw("%ebx"))
-    , Movl(var_raw("4(%esp)"), var_raw("%esi"))
-    , Movl(var_raw("8(%esp)"), var_raw("%edi"))
+      Movl(var_raw_mem("(%esp)" ), var_raw("%ebx"))
+    , Movl(var_raw_mem("4(%esp)"), var_raw("%esi"))
+    , Movl(var_raw_mem("8(%esp)"), var_raw("%edi"))
     , Addl(var_const("12"), var_raw("%esp"))
     , Leave()
     , Ret()
@@ -35,11 +35,12 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, args, closure, pyast):
+    def __init__(self, name, args, closure, pyast, children):
         self.name = name
         self.args = args
         self.closure = closure
         self.pyast = pyast
+        self.children = children # [DefinedFunction]
 
     def get_ast(self):
         return self.pyast
@@ -73,18 +74,24 @@ def preprocess_functions(pyst):
 
     # Now we probably have statements
     if isinstance(pyst, ast.Stmt):
+        # fnlst : [(Function, [Function])] | lhs = parent & rhs = children
         (newast, fnlst) = loose_preprocess_functions(pyst)
 
         fn = ast.Function(None, mangle("","main"), [], [], 0, None, newast)
-        fnlst.append(fn)
+        rootfn = (fn, fnlst)
 
-        defined = set(map(lambda f: f.getChildren()[1], fnlst))
-        deffns = [to_defined_function(i, defined) for i in fnlst]
-        for f in deffns:
-            print f
-        return deffns
+        defn = to_defined_function(rootfn) # return DefinedFunction
+        return flatten_function_tree(defn)
 
     raise Exception("Unexpected " + str(pyst.__class__) + " in preprocess functions")
+
+def flatten_function_tree(rootfn):
+    tot_ret = []
+    for i in rootfn.children:
+        tot_ret += flatten_function_tree(i)
+    tot_ret.append( rootfn )
+    return tot_ret
+        
 
 def set_to_map(s):
     md = {}
@@ -96,13 +103,20 @@ def set_to_map(s):
 #
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
-def to_defined_function(function, predefined):
-    (_, name, args, _, _, stmts) = function.getChildren()
-    free_vars = get_free_vars(stmts,predefined)
+def to_defined_function(function_p):
+    (parent, children) = function_p
+
+    new_children = [to_defined_function(i) for i in children]
+
+    (_, name, args, _, _, stmts) = parent.getChildren()
+    free_vars = get_free_vars(stmts)
+    for child in new_children:
+        free_vars |= set(child.closure.keys())
+
     # subtract out the args given
     free_vars -= set(args) 
 
-    return DefinedFunction(name, args, set_to_map(free_vars), stmts)
+    return DefinedFunction(name, args, set_to_map(free_vars), stmts, new_children)
 
 def mangle(a_name, name_p):
     return "x90_" + a_name + "_" + name_p
@@ -110,7 +124,7 @@ def mangle(a_name, name_p):
 
 # return a set of the free vars in 
 # the function
-def get_free_vars(pyast, defined):
+def get_free_vars(pyast):
 
     # Start with a list of all the name referenced and
     # then remove all of the one which are assigned in
@@ -138,7 +152,7 @@ def get_free_vars(pyast, defined):
 
     (assign, ref) = loose_get_free_vars(pyast)
     print "(ASSIGN, REF)",(assign,ref)
-    return (ref - assign - defined - set(["True", "False"]))
+    return (ref - assign - set(["True", "False"]))
 
 # this needs to be a separate class so that
 # way we can intercept and build the closure
@@ -187,12 +201,10 @@ def loose_preprocess_functions(pyast,a_name="main"):
 
                 mname = mangle(a_name, name)
                 (stmts_prime, fns) = loose_preprocess_functions(stmts,mname)
-                new_func = ast.Function(None, mname, args, [], 0, None, stmts_prime)
-
-                for f in fns:
-                    functionlist.append(f)
+                new_func = (ast.Function(None, mname, args, [], 0, None, stmts_prime), fns)
 
                 functionlist.append(new_func)
+
                 retlist.append(ast.Assign([ast.AssName(name, 'OP_ASSIGN')],
                     FnName(mname)))
             else:
@@ -231,9 +243,9 @@ def loose_preprocess_functions(pyast,a_name="main"):
         args = pyast.getChildren()[0]
         (stmt, fns) = loose_preprocess_functions(pyast.getChildren()[2], name)
         stmt_p = ast.Stmt([ast.Return(stmt)])
-        fn = ast.Function(None, name, args, [], 0, None, stmt_p)
+        fn = (ast.Function(None, name, args, [], 0, None, stmt_p), fns)
 
-        return (FnName(name), [fn] + fns)
+        return (FnName(name), [fn])
 
     elif isinstance(pyast, ast.CallFunc):
         lhs = pyast.getChildNodes()[0]
