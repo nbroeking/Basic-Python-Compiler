@@ -83,7 +83,8 @@ def allocate_registers( asm_tree ):
             list(alloc.remove_trivial(asm_tree))
 
 
-    return [Subl(AsmVar("%s" % ((n_stack_vars+2)*4), CONSTANT), AsmVar("%esp", RAW))] + asm_tree
+    nsubbytes_var = AsmVar("%s" % ((n_stack_vars+2)*4), CONSTANT)
+    return [Subl(nsubbytes_var, AsmVar("%esp", RAW))] + asm_tree
 
 #The Allocation class provides all register allocation functionality
 class Allocation:
@@ -107,7 +108,7 @@ class Allocation:
     def get_mapping( self, color ):
         if color < NREG:
             return REG_MAP[color]
-        return "-%d(%%ebp)" % ((color - NREG + 1)*4)
+        return "-%d(%%ebp)" % ((color - NREG + 4)*4)
     
     #Turns the Var into a asm
     def to_asm( self, var, colors ):

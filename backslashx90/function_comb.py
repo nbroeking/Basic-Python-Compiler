@@ -16,15 +16,16 @@ preamble = [
       Push(var_raw("%ebp"))
     , Movl(var_raw("%esp"), var_raw("%ebp"))
     , Subl(var_const("12"), var_raw("%esp"))
-    , Movl(var_raw("%ebx"), var_raw_mem("(%esp)"))
-    , Movl(var_raw("%esi"), var_raw_mem("4(%esp)"))
-    , Movl(var_raw("%edi"), var_raw_mem("8(%esp)"))
+
+    , Movl(var_raw("%ebx"), var_raw_mem("-4(%ebp)"))
+    , Movl(var_raw("%esi"), var_raw_mem("-8(%ebp)"))
+    , Movl(var_raw("%edi"), var_raw_mem("-12(%ebp)"))
 ]
 
 postamble = [
-      Movl(var_raw_mem("(%esp)" ), var_raw("%ebx"))
-    , Movl(var_raw_mem("4(%esp)"), var_raw("%esi"))
-    , Movl(var_raw_mem("8(%esp)"), var_raw("%edi"))
+      Movl(var_raw_mem("-4(%ebp)" ), var_raw("%ebx"))
+    , Movl(var_raw_mem("-8(%ebp)"),  var_raw("%esi"))
+    , Movl(var_raw_mem("-12(%ebp)"), var_raw("%edi"))
     , Addl(var_const("12"), var_raw("%esp"))
     , Leave()
     , Ret()
@@ -35,8 +36,9 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, args, closure, pyast, children):
+    def __init__(self, name, origname, args, closure, pyast, children):
         self.name = name
+        self.origname = origname
         self.args = args
         self.closure = closure
         self.pyast = pyast
@@ -120,7 +122,12 @@ def to_defined_function(function_p, parent_name=""):
     # subtract out the args given
     free_vars -= set(args) 
 
-    return DefinedFunction(mname, args, set_to_map(free_vars), stmts, new_children)
+    if name in free_vars:
+        node = ast.Assign([ast.AssName(name, 'OP_ASSIGN')], FnName(mname))
+        stmts = ast.Stmt( [node] + list(stmts.getChildren()) )
+        free_vars -= set(name)
+
+    return DefinedFunction(mname, name, args, set_to_map(free_vars), stmts, new_children)
 
 def mangle(a_name, name_p):
     x = "x90_" + a_name + "_" + name_p
