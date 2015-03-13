@@ -94,7 +94,7 @@ class Stage2:
         # v: index into closure
         # k: name of variable
         for (k, v) in myfunction.closure.items():
-            self.addAsm( Movl(var_const(str(v)), var_raw_mem("4(%esp)")) )
+            self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
             self.addAsm( Movl(myenv, var_raw_mem("(%esp)")) )
             self.addAsm( Call("get_subscript") )
             self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
@@ -162,12 +162,15 @@ class Stage2:
                     self.addAsm( Movl(var_raw("%eax"), env) )
                     self.restore_registers(20)
 
-                    self.save_registers(28)
-                    self.addAsm( Movl(env, var_raw_mem("(%esp)")) )
                     for (k, v) in free_vars.items():
+                        self.save_registers(28)
+                        self.addAsm( Movl(env, var_raw_mem("(%esp)")) )
                         self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
                         self.addAsm( Movl(AsmVar(k), var_raw_mem("8(%esp)")) )
                         self.addAsm( Call("set_subscript") )
+                        self.restore_registers(28)
+
+                    self.save_registers(28)
                     self.addAsm( Movl(var_const(fn_name), var_raw_mem("(%esp)")) )
                     self.addAsm( Movl(env, var_raw_mem("4(%esp)")) )
                     self.addAsm( Orl(var_const("3"), var_raw_mem("4(%esp)")) )

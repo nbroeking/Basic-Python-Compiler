@@ -6,7 +6,7 @@ def tricky0(y):
         def tricky2(z):
             t = 2
             return x + y + z + w + v+ u + t
-        return lambda x: tricky2(x)
+        return tricky2
     return tricky1
 
 print tricky0(5)(2)(1)

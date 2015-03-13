@@ -520,7 +520,7 @@ static pyobj* list_subscript(list ls, pyobj n)
     else if (0 <= ls.len + i && ls.len + i < ls.len)
       return &(ls.data[ls.len + i]);
     else {
-      printf("ERROR: list_nth (%d) index larger than list (%d)\n", ((int)n)/4, ls.len);
+      printf("ERROR: list_nth (%d) index larger than list (%d) 0\n", ((int)n)/4, ls.len);
       assert(0);
     }
   }
@@ -529,13 +529,13 @@ static pyobj* list_subscript(list ls, pyobj n)
     if (b < ls.len)
       return &(ls.data[b]);
     else {
-      printf("ERROR: list_nth index larger than list");
-      exit(1);
+      printf("ERROR: list_nth (%d) index larger than list (%d) 1\n", ((int)n)/4, ls.len);
+      assert(0);
     }
   }
   default:
-    printf("ERROR: list_nth expected integer index");
-    exit(1);
+      printf("ERROR: unknown tag for list subscript %d\n", tag(n));
+      assert(0);
   }
 }
 

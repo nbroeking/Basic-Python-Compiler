@@ -109,9 +109,11 @@ def to_defined_function(function_p):
     new_children = [to_defined_function(i) for i in children]
 
     (_, name, args, _, _, stmts) = parent.getChildren()
-    free_vars = get_free_vars(stmts)
+    print name + " GET_FREE_VARS " + str(stmts)
+    (free_vars,assigns) = get_free_vars(stmts)
     for child in new_children:
         free_vars |= set(child.closure.keys())
+    free_vars -= assigns
 
     # subtract out the args given
     free_vars -= set(args) 
@@ -138,6 +140,9 @@ def get_free_vars(pyast):
                 return (set([pyast.getChildren()[0].getChildren()[0]]), set())
             else:
                 return (set(),set())
+
+        elif isinstance(pyast, FnName):
+            return (set([pyast.name]), set())
     
         else:
             total_ref = set()
@@ -152,7 +157,7 @@ def get_free_vars(pyast):
 
     (assign, ref) = loose_get_free_vars(pyast)
     print "(ASSIGN, REF)",(assign,ref)
-    return (ref - assign - set(["True", "False"]))
+    return (ref, assign | set(["True", "False"]))
 
 # this needs to be a separate class so that
 # way we can intercept and build the closure

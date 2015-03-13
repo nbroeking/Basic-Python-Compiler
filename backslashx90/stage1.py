@@ -248,7 +248,6 @@ class Stage1:
             return self.loose_flatten_compare(pyst)
 
         if isinstance(pyst, FnName):
-            print "WE MADE IT TO THE FNNAME WOOOOOOOOOOOOO" + pyst.name + "\n\n\n\n\n\n\n\n" 
             tmp = self.tmpvar()
             self.buffer.append( core.Assign(tmp, core.MakeClosure(pyst.name)) )
             return tmp
