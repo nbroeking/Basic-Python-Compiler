@@ -122,10 +122,9 @@ def to_defined_function(function_p, parent_name=""):
     # subtract out the args given
     free_vars -= set(args) 
 
-    if name in free_vars:
-        node = ast.Assign([ast.AssName(name, 'OP_ASSIGN')], FnName(mname))
-        stmts = ast.Stmt( [node] + list(stmts.getChildren()) )
-        free_vars -= set(name)
+    node = ast.Assign([ast.AssName(name, 'OP_ASSIGN')], FnName(mname))
+    stmts = ast.Stmt( [node] + list(stmts.getChildren()) )
+    free_vars -= set(name)
 
     return DefinedFunction(mname, name, args, set_to_map(free_vars), stmts, new_children)
 
