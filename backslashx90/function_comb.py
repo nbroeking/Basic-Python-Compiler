@@ -75,9 +75,9 @@ def preprocess_functions(pyst):
     # Now we probably have statements
     if isinstance(pyst, ast.Stmt):
         # fnlst : [(Function, [Function])] | lhs = parent & rhs = children
-        (newast, fnlst) = loose_preprocess_functions(pyst)
+        (newast, fnlst) = loose_preprocess_functions(pyst, mangle("", "main"))
 
-        fn = ast.Function(None, mangle("","main"), [], [], 0, None, newast)
+        fn = ast.Function(None, "main", [], [], 0, None, newast)
         rootfn = (fn, fnlst)
 
         defn = to_defined_function(rootfn) # return DefinedFunction
@@ -103,12 +103,14 @@ def set_to_map(s):
 #
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
-def to_defined_function(function_p):
+def to_defined_function(function_p, parent_name=""):
     (parent, children) = function_p
 
-    new_children = [to_defined_function(i) for i in children]
-
     (_, name, args, _, _, stmts) = parent.getChildren()
+    mname = mangle(parent_name, name)
+    print parent_name + " " + name + " MANGLED " + mname
+    new_children = [to_defined_function(i,mname) for i in children]
+
     print name + " GET_FREE_VARS " + str(stmts)
     (free_vars,assigns) = get_free_vars(stmts)
     for child in new_children:
@@ -118,10 +120,13 @@ def to_defined_function(function_p):
     # subtract out the args given
     free_vars -= set(args) 
 
-    return DefinedFunction(name, args, set_to_map(free_vars), stmts, new_children)
+    return DefinedFunction(mname, args, set_to_map(free_vars), stmts, new_children)
 
 def mangle(a_name, name_p):
-    return "x90_" + a_name + "_" + name_p
+    x = "x90_" + a_name + "_" + name_p
+    if x == "x90_main_0lambda":
+        raise Exception()
+    return x
 
 
 # return a set of the free vars in 
@@ -169,6 +174,9 @@ class FnName:
     def getChildNodes(self):
         return []
 
+    def getChildren(self):
+        return []
+
     def _to_str(self):
         return "fn(%s)" % self.name
 
@@ -185,7 +193,7 @@ class FnName:
 # is an array of function ast nodes
 
 nonce = 0 # because FML
-def loose_preprocess_functions(pyast,a_name="main"):
+def loose_preprocess_functions(pyast,a_name):
     global nonce
     # list of ASTs of the functions to pull out
     functionlist = []
@@ -206,7 +214,7 @@ def loose_preprocess_functions(pyast,a_name="main"):
 
                 mname = mangle(a_name, name)
                 (stmts_prime, fns) = loose_preprocess_functions(stmts,mname)
-                new_func = (ast.Function(None, mname, args, [], 0, None, stmts_prime), fns)
+                new_func = (ast.Function(None, name, args, [], 0, None, stmts_prime), fns)
 
                 functionlist.append(new_func)
 
@@ -214,7 +222,7 @@ def loose_preprocess_functions(pyast,a_name="main"):
                     FnName(mname)))
             else:
                 print "I = ", i
-                (new_i, functions) = loose_preprocess_functions(i)
+                (new_i, functions) = loose_preprocess_functions(i, a_name)
                 functionlist += functions
                 retlist.append(new_i)
 
@@ -223,8 +231,8 @@ def loose_preprocess_functions(pyast,a_name="main"):
     elif isinstance(pyast, (ast.Assign, ast.Add, ast.And, ast.Or)):
         rhs = pyast.getChildren()[1]
         lhs = pyast.getChildren()[0]
-        (rhs_prime, rfns) = loose_preprocess_functions(rhs)
-        (lhs_prime, lfns) = loose_preprocess_functions(lhs)
+        (rhs_prime, rfns) = loose_preprocess_functions(rhs,a_name)
+        (lhs_prime, lfns) = loose_preprocess_functions(lhs,a_name)
         if isinstance(pyast, ast.Assign):
             ret_prime = ast.Assign([lhs_prime], rhs_prime)
         else:
@@ -235,28 +243,29 @@ def loose_preprocess_functions(pyast,a_name="main"):
         rhs = pyast.getChildren()[2]
         op = pyast.getChildren()[1]
         lhs = pyast.getChildren()[0]
-        (rhs_prime, rfns) = loose_preprocess_functions(rhs)
-        (lhs_prime, lfns) = loose_preprocess_functions(lhs)
+        (rhs_prime, rfns) = loose_preprocess_functions(rhs,a_name)
+        (lhs_prime, lfns) = loose_preprocess_functions(lhs,a_name)
         ret_prime = ast.Compare(lhs_prime, [op,rhs_prime])
         return (ret_prime, rfns + lfns)
         
 
     elif isinstance(pyast, ast.Lambda):
         # and this is why this function is a bitch
-        name = mangle(a_name, "%dlambda" % nonce)
+        name = "%dlambda" % nonce
+        mname = mangle(a_name, name)
         nonce += 1
         args = pyast.getChildren()[0]
         (stmt, fns) = loose_preprocess_functions(pyast.getChildren()[2], name)
         stmt_p = ast.Stmt([ast.Return(stmt)])
         fn = (ast.Function(None, name, args, [], 0, None, stmt_p), fns)
 
-        return (FnName(name), [fn])
+        return (FnName(mname), [fn])
 
     elif isinstance(pyast, ast.CallFunc):
         lhs = pyast.getChildNodes()[0]
         args = pyast.getChildNodes()[1:]
-        (lhs_prime, fns) = loose_preprocess_functions(lhs)
-        args_p = map(loose_preprocess_functions, args)
+        (lhs_prime, fns) = loose_preprocess_functions(lhs,a_name)
+        args_p = [loose_preprocess_functions(i,a_name) for i in args]
 
         (args_prime, fns2) = zip(*args_p) if len(args_p) > 0 else ([],[])
         for i in fns2:
@@ -265,12 +274,12 @@ def loose_preprocess_functions(pyast,a_name="main"):
 
     elif isinstance(pyast, ast.Printnl):
         rhs = pyast.getChildNodes()[0] 
-        (rhs_prime, fns) = loose_preprocess_functions(rhs)
+        (rhs_prime, fns) = loose_preprocess_functions(rhs,a_name)
         return (ast.Printnl([rhs_prime], None), fns)
 
     elif isinstance(pyast, (ast.Return, ast.Not, ast.UnarySub, ast.Discard)):
         rhs = pyast.getChildNodes()[0]
-        (rhs_prime, fns) = loose_preprocess_functions(rhs)
+        (rhs_prime, fns) = loose_preprocess_functions(rhs,a_name)
         return (pyast.__class__(rhs_prime), fns)
         
     elif isinstance(pyast, (ast.Const, ast.Name, ast.AssName)):
@@ -278,19 +287,19 @@ def loose_preprocess_functions(pyast,a_name="main"):
         return (pyast, [])
     
     elif isinstance(pyast, ast.If):
-        (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0])
-        (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1])
+        (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0],a_name)
+        (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1],a_name)
         if pyast.getChildren()[2] is not None:
-            (new_else, elsefuncs) = loose_preprocess_functions(pyast.getChildren()[2])
+            (new_else, elsefuncs) = loose_preprocess_functions(pyast.getChildren()[2],a_name)
         else:
             (new_else, elsefuncs) = (None, [])
 
         return (ast.If([(new_cond, new_then)], new_else), funcs + thenfuncs + elsefuncs)
     
     elif isinstance(pyast, ast.IfExp):
-        (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0])
-        (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1])
-        (new_else, elsefuncs) = loose_preprocess_functions(pyast.getChildren()[2])
+        (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0],a_name)
+        (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1],a_name)
+        (new_else, elsefuncs) = loose_preprocess_functions(pyast.getChildren()[2],a_name)
 
         return (ast.IfExp(new_cond, new_then, new_else), funcs + thenfuncs + elsefuncs)
 
@@ -298,23 +307,23 @@ def loose_preprocess_functions(pyast,a_name="main"):
         retlst = []
         fns = []
         for i in pyast.getChildren():
-            (l, f) = loose_preprocess_functions(i)
+            (l, f) = loose_preprocess_functions(i,a_name)
             fns += f
             retlst.append(l)
         return (ast.List(retlst), fns)
 
     elif isinstance(pyast, ast.Subscript):
         (lhs, op, rhs) = pyast.getChildren()
-        (lhsp, lhsf) = loose_preprocess_functions(lhs)
-        (rhsp, rhsf) = loose_preprocess_functions(rhs)
+        (lhsp, lhsf) = loose_preprocess_functions(lhs, a_name)
+        (rhsp, rhsf) = loose_preprocess_functions(rhs, a_name)
         return (ast.Subscript(lhsp, op, [rhsp]), lhsf + rhsf)
 
     elif isinstance(pyast, ast.Dict):
         retlst = []
         fns = []
         for (k,v) in pyast.items:
-            (kp, kf) = loose_preprocess_functions(k)
-            (vp, vf) = loose_preprocess_functions(v)
+            (kp, kf) = loose_preprocess_functions(k, a_name)
+            (vp, vf) = loose_preprocess_functions(v, a_name)
             fns += kf + vf
             retlst.append((kp, vp))
         return (ast.Dict(retlst), fns)

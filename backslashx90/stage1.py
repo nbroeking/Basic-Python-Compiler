@@ -76,7 +76,7 @@ class Stage1:
 
         # args are flat for sure 
         var = self.tmpvar()
-        if lhs.getChildren()[0] in ["input", "print"]:
+        if isinstance(lhs, pyast.Name) and lhs.getChildren()[0] in ["input", "print"]:
             # finally gave in
             self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
         else:

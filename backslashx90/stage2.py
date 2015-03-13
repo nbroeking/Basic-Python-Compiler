@@ -83,26 +83,27 @@ class Stage2:
         
 
 #Select Instructions
-    def instructionSelection(self, lst, defs, fname):
-        myfunction = defs[fname]
-        i = 8
+    def instructionSelection(self, lst, defs, fname, preamble=True):
         
-        myenv = var_caller_saved(self.tmpvar())
-        self.addAsm(Movl(var_raw_mem("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), myenv))
-
-        self.save_registers(20)
-        # v: index into closure
-        # k: name of variable
-        for (k, v) in myfunction.closure.items():
-            self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
-            self.addAsm( Movl(myenv, var_raw_mem("(%esp)")) )
-            self.addAsm( Call("get_subscript") )
-            self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
-        self.restore_registers(20)
-
-        for arg in myfunction.args:
-            self.addAsm( Movl(var_raw_mem("%s(%%ebp)" % i), AsmVar(arg)) )
-            i += 4
+        if preamble:
+            myfunction = defs[fname]
+            i = 8
+            myenv = var_caller_saved(self.tmpvar())
+            self.addAsm(Movl(var_raw_mem("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), myenv))
+    
+            self.save_registers(20)
+            # v: index into closure
+            # k: name of variable
+            for (k, v) in myfunction.closure.items():
+                self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
+                self.addAsm( Movl(myenv, var_raw_mem("(%esp)")) )
+                self.addAsm( Call("get_subscript") )
+                self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
+            self.restore_registers(20)
+    
+            for arg in myfunction.args:
+                self.addAsm( Movl(var_raw_mem("%s(%%ebp)" % i), AsmVar(arg)) )
+                i += 4
 
         for ast in lst:
             if isinstance(ast, core.Comment):
@@ -334,11 +335,11 @@ class Stage2:
                 old_asm = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(thens, defs, fname)
+                self.instructionSelection(thens, defs, fname, False)
                 new_thens = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(elses, defs, fname)
+                self.instructionSelection(elses, defs, fname, False)
                 new_elses = self.AsmTree
 
                 self.AsmTree = old_asm
