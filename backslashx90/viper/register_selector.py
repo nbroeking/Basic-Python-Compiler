@@ -306,7 +306,7 @@ class Allocation:
                     if v != t:
                         self.add_interfere( ret_map, v, t )
     
-            if isinstance( instr, Push ):
+            if isinstance( instr, (Push,CallStar) ):
                 t = instr.val
 
                 if self.is_var(t):
@@ -414,7 +414,7 @@ class Allocation:
                 if self.is_var(rhs):
                     current_set.add( rhs )
     
-            elif isinstance( instr, Push ):
+            elif isinstance( instr, (Push,CallStar) ):
                 rhs = instr.val
                 if self.is_var(rhs):
                     current_set.add( rhs )

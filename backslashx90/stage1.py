@@ -76,7 +76,7 @@ class Stage1:
 
         # args are flat for sure 
         var = self.tmpvar()
-        if var in ["input", "print"]:
+        if lhs.getChildren()[0] in ["input", "print"]:
             # finally gave in
             self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
         else:
@@ -125,7 +125,7 @@ class Stage1:
         cond = self.flatten_to_var( pyst.getChildren()[0] )
 
         real_cond = self.tmpvar()
-        self.addAsm(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond])))
+        self.addAsm(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond])));
 
         then_nodes = pyst.getChildren()[1]
         if pyst.getChildren()[2] is None:

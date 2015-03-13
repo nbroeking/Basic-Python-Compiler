@@ -334,6 +334,21 @@ class Call:
     def map_vars(self, f): # apply function to all vars
         pass
 
+class CallStar:
+    def __init__(self, name):
+        self.name = name
+        self.val = name
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def _to_str(self):
+        return "call *%s" % (self.name)
+
+    def map_vars(self, f): # apply function to all vars
+        self.name = f(self.name)
+        self.val = f(self.val)
+
 class Subl:
     def __init__(self, lhs, rhs):
         if not isinstance(lhs, AsmVar) or not isinstance(rhs, AsmVar):

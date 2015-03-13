@@ -14,12 +14,12 @@ except:
     import core as core
     from AsmTypes import *
 
-from function_comb import FnName
+from function_comb import FnName, mangle
 
 #Perform Register Selection
-def selection(ast, fn):
+def selection(ast, defs, fname):
     st2 = Stage2();
-    return st2.assemble(ast, fn);
+    return st2.assemble(ast, defs, fname);
 
 #The Register Selection Object
 class Stage2:
@@ -40,8 +40,8 @@ class Stage2:
         return ret
 
 #Create the Asm tree and then Allocate Registers
-    def assemble(self, ast, fn):
-        self.instructionSelection(ast, fn);
+    def assemble(self, ast, defs, fname):
+        self.instructionSelection(ast, defs, fname);
         print "-------- ASM TREE BEFORE REG"
         for i in self.AsmTree:
             print ("%s" % i._to_str())
@@ -83,7 +83,27 @@ class Stage2:
         
 
 #Select Instructions
-    def instructionSelection(self, lst, fn):
+    def instructionSelection(self, lst, defs, fname):
+        myfunction = defs[fname]
+        i = 8
+        
+        myenv = AsmVar(self.tmpvar())
+        self.addAsm(Movl(var_raw("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), myenv))
+
+        self.save_registers(20)
+        # v: index into closure
+        # k: name of variable
+        for (k, v) in myfunction.closure.items():
+            self.addAsm( Movl(var_const(str(v)), var_raw("4(%esp)")) )
+            self.addAsm( Movl(myenv, var_raw("(%esp)")) )
+            self.addAsm( Call("get_subscript") )
+            self.addAsm( Movl(var_raw("%eax"), AsmVar(k)) )
+        self.restore_registers(20)
+
+        for arg in myfunction.args:
+            self.addAsm( Movl(var_raw("%s(%%ebp)" % i), AsmVar(arg)) )
+            i += 4
+
         for ast in lst:
             if isinstance(ast, core.Comment):
                 self.addAsm( Comment(ast.comment) )
@@ -125,6 +145,33 @@ class Stage2:
                         , Movl(var_raw("%eax"), vname) ] +
                         self.restore_registers_arr(20)
                     ))
+
+                elif isinstance(op, core.MakeClosure):
+                    fn_name = op.name 
+                    fn = defs[fn_name] # :: DefinedFunction
+                    free_vars = fn.closure
+                    l = len(free_vars)
+                    vname = var_caller_saved(name)
+
+                    env = var_caller_saved(self.tmpvar())
+
+                    self.save_registers(20)
+                    self.addAsm( Movl(var_const(str(l)), var_raw("(%esp)")) )
+                    self.addAsm( Call("create_list") )
+                    self.addAsm( Movl(var_raw("%eax"), env) )
+                    self.restore_registers(20)
+
+                    self.save_registers(28)
+                    self.addAsm( Movl(env, var_raw("(%esp)")) )
+                    for (k, v) in free_vars.items():
+                        self.addAsm( Movl(AsmVar(k), var_raw("4(%esp)")) )
+                        self.addAsm( Movl(AsmVar(v), var_raw("8(%esp)")) )
+                        self.addAsm( Call("set_subscript") )
+                    self.addAsm( Movl(var_const(fn_name), var_raw("(%esp)")) )
+                    self.addAsm( Movl(env, var_raw("4(%esp)")) )
+                    self.addAsm( Call("create_closure") )
+                    self.addAsm( Movl(var_raw("%eax"), vname) )
+                    self.restore_registers(28)
                 
                 elif isinstance(op, core.Not):
                     vname = var_caller_saved(name)
@@ -247,9 +294,9 @@ class Stage2:
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
 
-                elif isinstance(op, core.CallFunc):
+                elif isinstance(op, core.CallClosure):
                     args = op.args
-                    n_bytes = 12 + (len(args) << 2)
+                    n_bytes = 16 + (len(args) << 2)
 
                     self.save_registers(n_bytes);
 
@@ -258,7 +305,8 @@ class Stage2:
                         self.AsmTree.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
-                    self.AsmTree.append(Call(self.to_base_asm(op.lhs)))
+                    self.AsmTree.append( Movl(AsmVar(op.lhs.name, 0, 4), var_raw_mem("0x%x(%%esp)" % idx)) )
+                    self.AsmTree.append(CallStar(AsmVar(op.lhs.name, 0, 0)))
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
 
@@ -277,11 +325,11 @@ class Stage2:
                 old_asm = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(thens, fn)
+                self.instructionSelection(thens, defs, fname)
                 new_thens = self.AsmTree
                 self.AsmTree = []
 
-                self.instructionSelection(elses, fn)
+                self.instructionSelection(elses, defs, fname)
                 new_elses = self.AsmTree
 
                 self.AsmTree = old_asm
@@ -312,5 +360,6 @@ class Stage2:
                 self.AsmTree.append(Addl(
                     AsmVar("16", CONSTANT), AsmVar("%esp", RAW)))
 
-            raise Exception("Unexpected %s in assemble" % ast.__class__)
+            else:
+                raise Exception("Unexpected %s in assemble" % ast.__class__)
 

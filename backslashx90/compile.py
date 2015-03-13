@@ -53,6 +53,7 @@ def main( argv):
             outfile=outfile[:-3]+".s"
 
 #Flatten
+    # defs :: [DefinedFunction]
     defs = preproc.preprocess_functions(ast)
     defsmap = dict([(i.name,i) for i in defs])
 
@@ -60,7 +61,7 @@ def main( argv):
         flattened = flat.flatten(fn.get_ast(), True)
         fn.set_ast(flattened)
 
-        print "Fattened: %s {" % fn.name
+        print "Fattened: %s (%s) {" % (fn.name, fn.closure)
         for i in flattened:
             print "    " + str(i)
         print "}\n"
@@ -69,14 +70,14 @@ def main( argv):
 
     for fn in defs:
         print "--------", fn.name, "----------"
-        tree = reg.selection(fn.get_ast(), fn);
+        tree = reg.selection(fn.get_ast(), defsmap, fn.name);
         fn.set_ast(tree)
 
     total = []
     for fn in defs:
         total += fn.build_final_asm_tree()
 #Print the ASM tree to a file
-    printer.output(total, outfile)
+    printer.output(total, outfile, len(defsmap[preproc.mangle("","main")].closure) )
 
 if __name__ == "__main__":
     main(sys.argv)

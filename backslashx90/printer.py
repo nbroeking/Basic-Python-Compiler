@@ -1,13 +1,14 @@
 # Instruction Selection
 #
-def output(ast, fname):
+def output(ast, fname, n):
     Print = printer(fname);
-    Print.output(ast);
+    Print.output(ast,n);
 
 def printTree(ast, fname):
     pp = printer(fname);
     pp.printTree(ast)
 
+from function_comb import mangle
 try:
     from viper.AsmTree import Label, Raw
 except:
@@ -23,7 +24,7 @@ class printer:
     def emit(self, line):
         self.out.write( line + '\n' );
 
-    def output(self, ast):
+    def output(self, ast, nfreevars):
         self.emit( '.data' );
         self.emit( 'puke_msg:' )
         self.emit( '.asciz \"There was a runtime error. PUKE.\\n\"' )
@@ -35,11 +36,21 @@ class printer:
         self.emit( '    movl $127, %eax' )
         self.emit( '    leave' )
         self.emit( '    ret' )
+        self.emit( '' )
 
         self.emit( '.globl main' );
         self.emit( '.type main, @function' );
         self.emit( 'main:' );
-        self.emit( '   jmp py_main' );
+        self.emit( '    pushl %ebp' )
+        self.emit( '    movl %esp, %ebp' )
+        self.emit( '    pushl $' + str(nfreevars*4) )
+        self.emit( '    call create_list' )
+        self.emit( '    orl  $3, %eax' )
+        self.emit( '    movl %eax, (%esp)' )
+        self.emit( '    call ' + mangle("", "main") );
+        self.emit( '    leave' )
+        self.emit( '    ret' )
+        self.emit( '' )
         
         # self.preamble()
         #self.emit( '    subl $%s, %%esp' % (size,)  );
