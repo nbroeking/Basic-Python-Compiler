@@ -39,21 +39,9 @@ cyan=$(echo -ne '\e[01;34m')
 nc=$(echo -ne '\e[00;0m')
 
 args=''
-tests=$(find tests -name '*.py' | sort)
-while [ $1 ] ; do
-    
-    case $1 in
-        -d) args="$args -d"
-        ;;
-        -t) 
-            shift
-            tests=$1
-        ;;
-    esac
-    shift
-done
 
-for i in $tests ; do
+function run_test {
+    i=$1
     real="$(echo -e "$input" | python2 $i)"
     if [ $? -ne 0 ] ; then
         echo "${red}$i: Bad test. Python fails${nc}"
@@ -63,7 +51,7 @@ for i in $tests ; do
         python2 compile.py -o /tmp/$$test.s $args $i && \
             gcc -m32 -o/tmp/$$test /tmp/$$test.s runtime/libruntime.a -lm
         rc=$?
-        echo -n "${cyan}$(printf '%-50s' $i) ["
+        echo -n "$green|$nc ${cyan}$(printf '%-50s' $i) ["
         if [ $rc -ne 0 ] ; then
             echo "${red}FAIL${nc}]"
             cat $i | while read lin ; do
@@ -75,9 +63,9 @@ for i in $tests ; do
             diff <(echo $this) <(echo $real) > /dev/null
     
             if [ $? -eq 0 ] ; then
-                echo "${green}PASS${cyan}]"  
+                echo "${green}PASS${cyan}] $green|"  
             else
-                echo "${red}FAIL${cyan}]"  
+                echo "${red}FAIL${cyan}] $green|"  
                 echo " + Expected:"
                 echo $real | while read line 
                         do echo " + + $line"
@@ -91,7 +79,30 @@ for i in $tests ; do
             rm /tmp/$$test*
         fi
     fi
+}
 
+while [ $1 ] ; do
+    
+    case $1 in
+        -d) args="$args -d"
+        ;;
+        -t) 
+            shift
+            run_test $1
+            exit 0
+        ;;
+    esac
+    shift
 done
-echo -ne "${nc}"
+    
+
+for test_set in tests old_tests secret_tests ; do
+    printf "$green+-------------------[ %-13s ]-----------------------+$nc\n" $test_set
+    tests=$(find $test_set -name '*.py' | sort)
+
+    for i in $tests ; do
+        run_test $i
+    done
+    echo -ne "${nc}"
+done
 

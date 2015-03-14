@@ -33,6 +33,12 @@ def curry_mul(x):
 def square(x):
     return curry_mul(x)(x)
 
+def super_curry2(x):
+    return super_curry if not even(x) else x
+
+def super_curry(x):
+    return super_curry2 if even(x) else x
+
 length_of_davis = 26
 davis = my_range(length_of_davis)
 
@@ -54,3 +60,5 @@ lesley = [square, curry_mul(2), curry_mul(3), lambda x: x + 2]
 better_lesley = my_map(lambda f: f(3), lesley, 4)
 
 print better_lesley
+
+print super_curry(0)(1)(2)(1)(4)(7)(2)(5)(8)(11)(12)(15)(18)(91)(4)(3)(387)

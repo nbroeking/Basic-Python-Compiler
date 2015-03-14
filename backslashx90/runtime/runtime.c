@@ -333,13 +333,13 @@ static unsigned int hash_any(void* o)
       return h;
     }
     default:
-      printf("unrecognized tag in hash_any\n");
+      printf("unrecognized tag in hash_any 1\n");
       *(int*)0 = 42;
     }
     break;
   }
   default:
-    printf("unrecognized tag in hash_any\n");
+    printf("unrecognized tag in hash_any 2\n");
     *(int*)0 = 42;
   }
 }

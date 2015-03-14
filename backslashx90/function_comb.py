@@ -32,11 +32,13 @@ postamble = [
 ]
 
 class DefinedFunction:
+
     # name : string -- name of the function
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
     def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children):
+
         self.name = name
         self.origname = origname
         self.args = args
@@ -72,6 +74,7 @@ class DefinedFunction:
 #
 # pyst : PythonAST -- the ast of the entire program
 # returns : list<DefinedFunction> -- a list of functions which have been defined
+nonce = 0
 def preprocess_functions(pyst):
     if isinstance(pyst, ast.Module):
         # for modules, just strip it
@@ -191,7 +194,6 @@ class FnName:
 # ast (modified from lambdas to identifiers) and the list
 # is an array of function ast nodes
 
-nonce = 0 # because FML
 def loose_preprocess_functions(pyast,a_name):
     global nonce
     # list of ASTs of the functions to pull out
@@ -203,6 +205,8 @@ def loose_preprocess_functions(pyast,a_name):
         # for a statement, we can parse all the
         # children
         stmtlst = pyast.getChildren()
+
+        counter_dict = {}
         for i in stmtlst:
             # if the node is a function, then
             # append it to the list, otherwise,
@@ -212,12 +216,22 @@ def loose_preprocess_functions(pyast,a_name):
                 (_, name, args, _, _, stmts) = i.getChildren()
 
                 mname = mangle(a_name, name)
+                oname = name
+                if mname in counter_dict:
+                    name = str(counter_dict[mname]) + name
+                    counter_dict[mname] += 1
+                    mname = mangle(a_name, name)
+                else:
+                    counter_dict[mname] = 1
+                    
+                    
+                    
                 (stmts_prime, fns) = loose_preprocess_functions(stmts,mname)
                 new_func = (ast.Function(None, name, args, [], 0, None, stmts_prime), fns)
 
                 functionlist.append(new_func)
 
-                retlist.append(ast.Assign([ast.AssName(name, 'OP_ASSIGN')],
+                retlist.append(ast.Assign([ast.AssName(oname, 'OP_ASSIGN')],
                     FnName(mname)))
             else:
                 print "I = ", i

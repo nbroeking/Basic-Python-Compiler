@@ -43,6 +43,7 @@ def main( argv):
 
 #If in debug write all stdout to stderr
     sys.stderr.write(open(argv[i],'r').read())
+
     ast = comp.parseFile(argv[i])
     print ast
 
