@@ -86,7 +86,7 @@ class Stage2:
         self.addAsm( Movl(lst_var, var_raw_mem("(%esp)")) )
         self.addAsm( Movl(idx_var, var_raw_mem("4(%esp)")) )
         self.addAsm( Movl(val_var, var_raw_mem("8(%esp)")) )
-        self.addAsm( Call("set_subscript") )
+        self.addAsm( Call("set_subscript2") )
         self.restore_registers(24)
 
     def comment(self, cmt):
@@ -278,7 +278,7 @@ class Stage2:
                     self.save_registers(20)
                     self.addAsm( Movl(self.to_base_asm(lhs), var_raw_mem("(%esp)")) )
                     self.addAsm( Movl(self.to_base_asm(rhs), var_raw_mem("4(%esp)")) )
-                    self.addAsm( Call("get_subscript") )
+                    self.addAsm( Call("get_subscript2") )
                     self.addAsm( Movl(var_raw("%eax"), vname) )
                     self.restore_registers(20)
                     

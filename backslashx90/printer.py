@@ -29,6 +29,40 @@ class printer:
         self.emit( 'puke_msg:' )
         self.emit( '.asciz \"There was a runtime error. PUKE.\\n\"' )
         self.emit( '.text' );
+
+        self.emit( '''
+set_subscript2:
+    /* cuz i got tired of lookin at it! */
+    movl 8(%esp), %eax
+    movl %eax, %ecx
+    andl $0x3, %ecx
+    andl $0xfffffffc, %eax
+    cmpl $3, %ecx
+    jnz set_subscript /* if not a bigobj */
+    movl (%eax), %ecx /* ecx now has the tag */
+    cmpl $2, %ecx     /* compare to FUN */
+    jnz set_subscript
+    movl %eax, 8(%esp)
+    jmp set_subscript /* treat functions as ptrs */
+
+    ret               /* just for show */
+
+get_subscript2:
+    /* cuz i got tired of lookin at it! */
+    movl 8(%esp), %eax
+    movl %eax, %ecx
+    andl $0x3, %ecx
+    andl $0xfffffffc, %eax
+    cmpl $3, %ecx
+    jnz get_subscript /* if not a bigobj */
+    movl (%eax), %ecx /* ecx now has the tag */
+    cmpl $2, %ecx     /* compare to FUN */
+    jnz get_subscript
+    movl %eax, 8(%esp)
+    jmp get_subscript /* treat functions as ptrs */
+
+    ret               /* just for show */
+        ''')
         
         self.emit( 'puke:' )
         self.emit( '    push $puke_msg' )

@@ -86,7 +86,7 @@ class Comment:
     def __str__(self): return self._to_str()
 
     def _to_str(self):
-        return "// %s" %self.comment
+        return "/* %s */" %self.comment
 
     def map_vars(self, _):
         pass

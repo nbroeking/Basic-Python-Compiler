@@ -165,7 +165,7 @@ class Stage1:
             val_arg = core.Name(val_var) if not val_var is None else base_cov(dct_children[i+1])
 
             self.addAsm( 
-                core.Assign(self.tmpvar(), core.CallFunc(core.Name("set_subscript"), [core.Name(dct_name), key_arg, val_arg])) )
+                core.Assign(self.tmpvar(), core.CallFunc(core.Name("set_subscript2"), [core.Name(dct_name), key_arg, val_arg])) )
             i += 2
 
         return dct_name
@@ -343,7 +343,7 @@ class Stage1:
 
                 retvar = self.tmpvar()
 
-                callfunc = core.CallFunc(core.Name("set_subscript"), [var, rhs_flat, to_assign])
+                callfunc = core.CallFunc(core.Name("set_subscript2"), [var, rhs_flat, to_assign])
                 self.buffer += [core.Assign(retvar, callfunc)]
                 return retvar
 
