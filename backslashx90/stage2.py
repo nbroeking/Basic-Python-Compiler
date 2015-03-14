@@ -135,6 +135,10 @@ class Stage2:
             self.addAsm( Call("malloc") )
             self.addAsm( Movl(EAX, myclosure) )
             self.restore_registers(16)
+            for k in myfunction.parent_closure.keys():
+                self.update_closure(myfunction, k)
+            for k in myfunction.args:
+                self.update_closure(myfunction, k)
             self.addAsm( Comment("}}}") )
 
         for ast in lst:

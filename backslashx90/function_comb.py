@@ -116,7 +116,7 @@ def to_defined_function(function_p, parent_name, parent_closure):
     (free_vars, assign_vars) = get_free_vars(stmts)
 
     # this function's closure
-    mclosure = set_to_map((free_vars | assign_vars | set(parent_closure.keys())) - set(["True", "False"]))
+    mclosure = set_to_map((free_vars | assign_vars | set(args) | set(parent_closure.keys())) - set(["True", "False"]))
 
     # the new children
     new_children = [to_defined_function(i,mname,mclosure) for i in children]
