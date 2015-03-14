@@ -27,11 +27,12 @@ input="0
 -90
 -8
 -78
--09
+-9
 -12
 12
 23
-45"
+45
+"
 
 red=$(echo -ne '\e[01;31m')
 green=$(echo -ne '\e[01;32m')
@@ -39,6 +40,14 @@ cyan=$(echo -ne '\e[01;34m')
 nc=$(echo -ne '\e[00;0m')
 
 args=''
+
+function infarand {
+    while true; do
+        echo $RANDOM
+    done
+}
+
+input="$input $(head -n 1000 <(infarand))"
 
 passed=0
 failed=0
