@@ -80,30 +80,69 @@ class Stage2:
 
     def restore_registers( self, amt=12 ):
         map( self.addAsm, self.restore_registers_arr(amt) )
-        
 
+    def set_subscript(self, lst_var, idx_var, val_var):
+        self.save_registers(24)
+        self.addAsm( Movl(lst_var, var_raw_mem("(%esp)")) )
+        self.addAsm( Movl(idx_var, var_raw_mem("4(%esp)")) )
+        self.addAsm( Movl(val_var, var_raw_mem("8(%esp)")) )
+        self.addAsm( Call("set_subscript") )
+        self.restore_registers(24)
+
+    def comment(self, cmt):
+        self.addAsm(Comment(cmt))
+        
+    def update_closure(self, defined_function, variable_name):
+        me = defined_function
+        my_closure_var = var_caller_saved("$fn_closure")
+        my_closure_dict = me.my_closure
+
+        if variable_name in my_closure_dict:
+            self.comment("Updating closure (%s) {{{" % variable_name)
+            offset = my_closure_dict[variable_name]
+            idx_var = var_const(str(offset*4))
+            val_var = AsmVar(variable_name) 
+            self.set_subscript(my_closure_var, idx_var, val_var)
+            self.comment("}}}")
+        
 #Select Instructions
     def instructionSelection(self, lst, defs, fname, preamble=True):
+        myfunction = defs[fname]
+        myclosure = var_caller_saved("$fn_closure") # the closure for _this_ function
         
         if preamble:
-            myfunction = defs[fname]
+            # First, move the value of the parent closure into the current scope
             i = 8
             myenv = var_caller_saved(self.tmpvar())
+            self.addAsm( Comment("Bringing parent closure into local scope {{{") )
             self.addAsm(Movl(var_raw_mem("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), myenv))
     
             self.save_registers(20)
             # v: index into closure
             # k: name of variable
-            for (k, v) in myfunction.closure.items():
+            for (k, v) in myfunction.parent_closure.items():
                 self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
                 self.addAsm( Movl(myenv, var_raw_mem("(%esp)")) )
                 self.addAsm( Call("get_subscript") )
                 self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
             self.restore_registers(20)
+            self.addAsm( Comment("}}}") )
     
+            self.addAsm( Comment("Bringing arguments into local scope {{{") )
             for arg in myfunction.args:
                 self.addAsm( Movl(var_raw_mem("%s(%%ebp)" % i), AsmVar(arg)) )
                 i += 4
+            self.addAsm( Comment("}}}") )
+
+            self.addAsm( Comment("Building local closure {{{") )
+            closure_size = len(myfunction.my_closure.items())
+            self.save_registers(16)
+            self.addAsm( Movl(var_const(str(closure_size*4)), var_raw_mem("(%esp)")) )
+            self.addAsm( Call("create_list") )
+            self.addAsm( Orl(var_const("3"), EAX) )
+            self.addAsm( Movl(EAX, myclosure) )
+            self.restore_registers(16)
+            self.addAsm( Comment("}}}") )
 
         for ast in lst:
             if isinstance(ast, core.Comment):
@@ -111,8 +150,10 @@ class Stage2:
             elif isinstance(ast, core.Assign):
                 self.addAsm( Comment("End Instruction \n\n")) 
                 self.addAsm( Comment("*" + str(ast)) )
-                name = ast.name
+                name = ast.name # the name of the varialbe
                 op = ast.rhs
+
+                # {{{
                 if isinstance(op, core.Deref):
                     self.AsmTree.append(Movl(AsmVar(op.arg, 0, op.offset), AsmVar(name)))
                     
@@ -149,31 +190,11 @@ class Stage2:
 
                 elif isinstance(op, core.MakeClosure):
                     fn_name = op.name 
-                    fn = defs[fn_name] # :: DefinedFunction
-                    free_vars = fn.closure
-                    l = len(free_vars)
                     vname = var_caller_saved(name)
-
-                    env = var_caller_saved(self.tmpvar())
-
-                    self.save_registers(20)
-                    self.addAsm( Movl(var_const(str(l*4)), var_raw_mem("(%esp)")) )
-                    self.addAsm( Call("create_list") )
-                    self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
-                    self.addAsm( Movl(var_raw("%eax"), env) )
-                    self.restore_registers(20)
-
-                    for (k, v) in free_vars.items():
-                        self.save_registers(28)
-                        self.addAsm( Movl(env, var_raw_mem("(%esp)")) )
-                        self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
-                        self.addAsm( Movl(AsmVar(k), var_raw_mem("8(%esp)")) )
-                        self.addAsm( Call("set_subscript") )
-                        self.restore_registers(28)
 
                     self.save_registers(28)
                     self.addAsm( Movl(var_const(fn_name), var_raw_mem("(%esp)")) )
-                    self.addAsm( Movl(env, var_raw_mem("4(%esp)")) )
+                    self.addAsm( Movl(myclosure, var_raw_mem("4(%esp)")) )
                     self.addAsm( Orl(var_const("3"), var_raw_mem("4(%esp)")) )
                     self.addAsm( Call("create_closure") )
                     self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
@@ -319,6 +340,10 @@ class Stage2:
                     self.AsmTree.append(CallStar(AsmVar(tmpname, 0, 4)))
                     self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
                     self.restore_registers(n_bytes)
+
+                # }}}
+
+                self.update_closure(myfunction, name)
 
 
             elif isinstance(ast, core.If):

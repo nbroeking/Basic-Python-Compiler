@@ -36,11 +36,12 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, origname, args, closure, pyast, children):
+    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children):
         self.name = name
         self.origname = origname
         self.args = args
-        self.closure = closure
+        self.parent_closure = parent_closure # the closure of the parent function
+        self.my_closure = my_closure         # the closure of this function
         self.pyast = pyast
         self.children = children # [DefinedFunction]
 
@@ -51,15 +52,17 @@ class DefinedFunction:
         self.pyast = nast
 
     def __str__(self):
-        return "%s(%s) { %s } (closure: %s)" % (self.name, ",".join(self.args), self.pyast, self.closure)
+        return "%s(%s) { %s } (closure: %s)" % (self.name, ",".join(self.args), self.pyast, self.parent_closure)
 
     def build_final_asm_tree(self):
         return [
             Raw(""),
+            Comment("%s[%s](%s) { " % (self.origname, ",".join(self.parent_closure.keys()), ",".join(self.args))),
             Raw(".globl %s" % self.name),
             Raw(".type %s,@function" % self.name),
             Label("%s" % self.name),
-        ] + preamble + self.pyast + [Label(".%s_ret" % self.name)] + postamble
+        ] + preamble + self.pyast + [Label(".%s_ret" % self.name)] + postamble + \
+            [Comment("}")]
         
 
 # there are two stages to breaking out the functions,
@@ -82,7 +85,7 @@ def preprocess_functions(pyst):
         fn = ast.Function(None, "main", [], [], 0, None, newast)
         rootfn = (fn, fnlst)
 
-        defn = to_defined_function(rootfn) # return DefinedFunction
+        defn = to_defined_function(rootfn, "", {}) # return DefinedFunction
         return flatten_function_tree(defn)
 
     raise Exception("Unexpected " + str(pyst.__class__) + " in preprocess functions")
@@ -105,33 +108,23 @@ def set_to_map(s):
 #
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
-def to_defined_function(function_p, parent_name=""):
+def to_defined_function(function_p, parent_name, parent_closure):
     (parent, children) = function_p
 
     (_, name, args, _, _, stmts) = parent.getChildren()
     mname = mangle(parent_name, name)
-    print parent_name + " " + name + " MANGLED " + mname
-    new_children = [to_defined_function(i,mname) for i in children]
+    (free_vars, assign_vars) = get_free_vars(stmts)
 
-    print name + " GET_FREE_VARS " + str(stmts)
-    (free_vars,assigns) = get_free_vars(stmts)
-    for child in new_children:
-        free_vars |= set(child.closure.keys())
-    free_vars -= assigns
+    # this function's closure
+    mclosure = set_to_map((free_vars | assign_vars | set(parent_closure.keys())) - set(["True", "False"]))
 
-    # subtract out the args given
-    free_vars -= set(args) 
+    # the new children
+    new_children = [to_defined_function(i,mname,mclosure) for i in children]
 
-    node = ast.Assign([ast.AssName(name, 'OP_ASSIGN')], FnName(mname))
-    stmts = ast.Stmt( [node] + list(stmts.getChildren()) )
-    free_vars -= set(name)
-
-    return DefinedFunction(mname, name, args, set_to_map(free_vars), stmts, new_children)
+    return DefinedFunction(mname, name, args, parent_closure, mclosure, stmts, new_children)
 
 def mangle(a_name, name_p):
     x = "x90_" + a_name + "_" + name_p
-    if x == "x90_0lambda_1lambda":
-        raise Exception()
     return x
 
 

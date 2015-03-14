@@ -61,7 +61,7 @@ def main( argv):
         flattened = flat.flatten(fn.get_ast(), True)
         fn.set_ast(flattened)
 
-        print "Fattened: %s (%s) {" % (fn.name, fn.closure)
+        print "Fattened: %s (%s) {" % (fn.name, fn.parent_closure)
         for i in flattened:
             print "    " + str(i)
         print "}\n"
@@ -77,7 +77,7 @@ def main( argv):
     for fn in defs:
         total += fn.build_final_asm_tree()
 #Print the ASM tree to a file
-    printer.output(total, outfile, len(defsmap[preproc.mangle("","main")].closure) )
+    printer.output(total, outfile, len(defsmap[preproc.mangle("","main")].parent_closure) )
 
 if __name__ == "__main__":
     main(sys.argv)

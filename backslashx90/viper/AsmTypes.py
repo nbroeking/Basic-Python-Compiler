@@ -106,3 +106,12 @@ class AsmVar:
         return self.name.__hash__()
 
 
+
+EAX = var_raw("%eax")
+EBX = var_raw("%ebx")
+ECX = var_raw("%ecx")
+EDX = var_raw("%edx")
+ESI = var_raw("%esi")
+EDI = var_raw("%edi")
+EBP = var_raw("%ebp")
+ESP = var_raw("%esp")
