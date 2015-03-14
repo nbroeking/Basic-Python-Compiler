@@ -132,6 +132,8 @@ class Stage2:
             closure_size = len(myfunction.my_closure.items())
             self.save_registers(16)
             self.addAsm( Movl(var_const(str(closure_size*4)), var_raw_mem("(%esp)")) )
+            # use a list for simplicity my ass
+            # to hell with using a list! void* FTW!
             self.addAsm( Call("malloc") )
             self.addAsm( Movl(EAX, myclosure) )
             self.restore_registers(16)

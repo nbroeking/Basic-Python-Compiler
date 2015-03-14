@@ -56,9 +56,9 @@ print sdavis
 sum_davis = (lambda l: foldl(lambda x,y: x+y, 0, l, length_of_davis))(sdavis)
 print sum_davis
 
-lesley = [square, curry_mul(2), curry_mul(3), lambda x: x + 2]
-better_lesley = my_map(lambda f: f(3), lesley, 4)
+leslie = [square, curry_mul(2), curry_mul(3), lambda x: x + 2]
+better_leslie = my_map(lambda f: f(3), leslie, 4)
 
-print better_lesley
+print better_leslie
 
 print super_curry(0)(1)(2)(1)(4)(7)(2)(5)(8)(11)(12)(15)(18)(91)(4)(3)(387)

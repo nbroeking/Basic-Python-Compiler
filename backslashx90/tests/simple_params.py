@@ -1,5 +1,5 @@
-lesley = 1
-def lesley_is(davis):
-    return davis + lesley
+leslie = 1
+def leslie_is(davis):
+    return davis + leslie
 
-print lesley_is(4)
+print leslie_is(4)
