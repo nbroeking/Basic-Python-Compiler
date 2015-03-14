@@ -40,6 +40,8 @@ nc=$(echo -ne '\e[00;0m')
 
 args=''
 
+passed=0
+failed=0
 function run_test {
     i=$1
     real="$(echo -e "$input" | python2 $i)"
@@ -54,8 +56,9 @@ function run_test {
         echo -n "$green|$nc ${cyan}$(printf '%-50s' $i) ["
         if [ $rc -ne 0 ] ; then
             echo "${red}FAIL${nc}]"
+            failed=$(($failed + 1))
             cat $i | while read lin ; do
-                        echo " + " $lin
+                        echo " + " "$lin"
                      done
         else
             this="$(echo -e "$input" | /tmp/$$test)"
@@ -64,8 +67,10 @@ function run_test {
     
             if [ $? -eq 0 ] ; then
                 echo "${green}PASS${cyan}] $green|"  
+                passed=$(($passed + 1))
             else
                 echo "${red}FAIL${cyan}] $green|"  
+                failed=$(($failed + 1))
                 echo " + Expected:"
                 echo $real | while read line 
                         do echo " + + $line"
@@ -105,4 +110,8 @@ for test_set in tests old_tests secret_tests ; do
     done
     echo -ne "${nc}"
 done
+
+printf "$green+-----------------------------------------------------------+$nc\n" $test_set
+printf "$green|                     Passed: $passed/$(($passed + $failed))                       |$nc\n"
+printf "$green+-----------------------------------------------------------+$nc\n" $test_set
 
