@@ -94,15 +94,13 @@ class Stage2:
         
     def update_closure(self, defined_function, variable_name):
         me = defined_function
-        my_closure_var = var_caller_saved("$fn_closure")
         my_closure_dict = me.my_closure
 
         if variable_name in my_closure_dict:
             self.comment("Updating closure (%s) {{{" % variable_name)
             offset = my_closure_dict[variable_name]
-            idx_var = var_const(str(offset*4))
             val_var = AsmVar(variable_name) 
-            self.set_subscript(my_closure_var, idx_var, val_var)
+            self.addAsm( Movl(val_var, AsmVar("$fn_closure", 0, offset*4)) )
             self.comment("}}}")
         
 #Select Instructions
@@ -113,19 +111,15 @@ class Stage2:
         if preamble:
             # First, move the value of the parent closure into the current scope
             i = 8
-            myenv = var_caller_saved(self.tmpvar())
+            myenv_n = self.tmpvar()
             self.addAsm( Comment("Bringing parent closure into local scope {{{") )
-            self.addAsm(Movl(var_raw_mem("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), myenv))
+            self.addAsm(Movl(var_raw_mem("%s(%%ebp)" % (len(myfunction.args) * 4 + 8)), AsmVar(myenv_n)))
     
-            self.save_registers(20)
             # v: index into closure
             # k: name of variable
             for (k, v) in myfunction.parent_closure.items():
-                self.addAsm( Movl(var_const(str(v*4)), var_raw_mem("4(%esp)")) )
-                self.addAsm( Movl(myenv, var_raw_mem("(%esp)")) )
-                self.addAsm( Call("get_subscript") )
-                self.addAsm( Movl(var_raw("%eax"), var_caller_saved(k)) )
-            self.restore_registers(20)
+                self.addAsm( Movl( AsmVar(myenv_n, 0, v*4), AsmVar(k) ) )
+
             self.addAsm( Comment("}}}") )
     
             self.addAsm( Comment("Bringing arguments into local scope {{{") )
@@ -138,8 +132,7 @@ class Stage2:
             closure_size = len(myfunction.my_closure.items())
             self.save_registers(16)
             self.addAsm( Movl(var_const(str(closure_size*4)), var_raw_mem("(%esp)")) )
-            self.addAsm( Call("create_list") )
-            self.addAsm( Orl(var_const("3"), EAX) )
+            self.addAsm( Call("malloc") )
             self.addAsm( Movl(EAX, myclosure) )
             self.restore_registers(16)
             self.addAsm( Comment("}}}") )
@@ -195,7 +188,6 @@ class Stage2:
                     self.save_registers(28)
                     self.addAsm( Movl(var_const(fn_name), var_raw_mem("(%esp)")) )
                     self.addAsm( Movl(myclosure, var_raw_mem("4(%esp)")) )
-                    self.addAsm( Orl(var_const("3"), var_raw_mem("4(%esp)")) )
                     self.addAsm( Call("create_closure") )
                     self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
                     self.addAsm( Movl(var_raw("%eax"), vname) )
