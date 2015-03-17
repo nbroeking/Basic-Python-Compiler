@@ -1,0 +1,194 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+\usepackage{minted}
+\usepackage{color}
+\usepackage{fancyhdr}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{multicol}
+\usepackage{titlesec}
+
+\definecolor{airforceblue}{rgb}{0.36, 0.54, 0.66}
+\definecolor{secblue}{rgb}{0.18, 0.27, 0.33}
+
+\input{style.tex}
+
+\pagestyle{plain}
+
+\title{Implicit Parallelism at Runtime in Compiled Python Programs\\
+    (Proposal)}
+\author{Nicolas Broeking \and Joshua Rahm}
+
+\begin{document}
+\begin{titlepage}
+\maketitle
+
+\end{titlepage}
+
+\raggedcolumns
+\begin{multicols}{2}
+\raggedcolumns
+
+\begin{abstract}
+
+As we make our way into the second half of the second decade of the
+third millennium, Moore's law has finally begun to wane as processor
+clock speed have begun to stagnate. However, while processor clock
+speeds have remained the same, processors are starting to have more and
+more cores. How to use these cores effectively is still a hard problem
+in software engineering especially because parallel processing requires
+careful attention to protect against race conditions and other caveats.
+As a result, the approach many languages take is to outlaw true parallel
+processing, but we believe that the answer is to bake parallel
+processing into the emitted assembly code so that the programmer never
+need to know of its existence, but may still enjoy the many benefits of
+a multi-core machine.
+
+\end{abstract}
+
+\section*{Group}
+\backslashx is us; Nicolas Broeking and
+Joshua Rahm. We are graduate students at the University of Colorado
+Boulder with interests in Systems Development and Telecommunications.
+
+\section*{Problem} In software engineering, parallelism is still a very
+under used feature.  While many programs require the programmer to
+implement parallelism explicitly others may simply rely on the operating
+system to achieve multiprocessing and use the message passing mechanisms
+of the operating system to share data.  Each of these approaches have
+their benefits and their pitfalls.
+
+In the latter case, it is well known that a context switch between two
+different processes is \emph{much} slower than threads, not to mention
+that passing data with messages via the operating system's IPC
+interfaces in much slower than shared heap space. Yet still,
+multiprocessing requires significant boiler plate programming to
+implement. However, in spite of these shortcomings, it is easy to
+implement this system once the boiler is in place, as synchronization is
+not an issue.
+
+In the former case, explicit threading, the problems are the inverse.
+Manual threading is fast and efficient, but require due diligence to 
+prevent race conditions and deadlocks. In addition, manual threading,
+like its counterpart, still requires much boiler plate implementation
+to use it to its full advantage, and yet the shared nature of threads
+implies that if a single thread has a bug, then it may cause the entire
+system to crash.
+
+\section*{Proposal}
+
+We propose to go around the manual, explicit implementation and instead
+let the compiler use a thread pool to parallelize problems implicitly.
+
+The traditional computation model has been to have a single CPU execute
+each instruction sequentially, but what if we are able to separate blocks
+of execution in which they may be able to execute independently, and are
+therefore able to be parallelized.
+
+For example, take the simple Python code below.
+
+\inputcode{Parallel Matrix}{example_1.py}
+
+It is trivial to see that, in fact, $a$ and $b$ are actually independent of
+each other, and as a result may be implemented independently.
+
+Even though $m$ is assigned to, these can be semantically two different variables
+and treated as such.
+
+Another colloquial example is the following: 
+
+\inputcode{Parallel List Comprehension}{example_2.py}
+
+In this example if $f$ and $b$ are pure functions, meaning they do not have any
+side effects, then we are able to parallelize this code for both aspects of this
+list comprehension.
+
+Similar purity analysis may be done on loops to determine if they are able to
+be parallelized as well.
+
+Finally, the most ambitious of the goals: being able to parallelize operations on
+separate blocks of memory.
+
+
+\inputcode{Partition Address Space}{example_3.py}
+In this example, the parallelization properties are much more subtle; however, the
+keen eye can see that the elements of $x$ and $y$ are changed independently of one
+and other. This means we can rearrange this program to 
+
+\inputcode{Partition Address Space 2}{example_4.py}
+
+And we can then parallelize this as we did the first example.
+
+\section*{Approach}
+
+Python is a dynamically typed programming language that naturally does in many
+ways limit its ability to be effectively parallelized which will force us to
+work with a subset of the Python Programming Language that will allow us to
+implement our improvements under the assumption that the user has not
+overridden certain operators and types.
+
+With these fairly limited changes to the Python language, we are still left with
+the challenge of parallelizing a program which we have limited knowledge of at compile time.
+Since this is the case, we will need to, at compile time, add many clues to indicate what
+may be optimized and what may not be able to. This will add several phases to our compiler.
+
+\subsection*{$\vert$ Purity Analysis}
+
+We may no longer assume that all functions will modify the global state of the program,
+and discovering purity when it exists is going to be the main distinction between parallelizeable
+code and sequential code. A handful of languages, most notably Haskell, have implemented
+purity checking with their type checker. C++ has also to an extent with the $const$ keyword.
+
+Detecting purity will be fairly straight forward. The function $f$ is considered pure if
+it never invokes any impure functions. A non pure function is a function that modifies
+the any variable that exists outside the scope of a function. So, for example, in this code
+sample
+
+
+\inputcode{Purity}{example_5.py}
+
+The function $pure$ is in fact pure while the function $impure$ is impure. Even though,
+both functions call $append$, a mutator function, $pure$ does it to a variable which
+was created in its own scope.
+
+The question now becomes, what if the $append$ function modifies some global state of the
+program? It is already considered to be an impure function since it mutates $self$. This
+is why, there needs to be some further analysis on member functions to determine if they are
+globally pure (meaning they only mutate $self$) or if they are globally impure (they make
+modifications outside of the scope).
+
+This is going to require metadata at runtime to discover the levels at which aspects may
+be parallelized. This data may be stored in a tag of the function object in the runtime to
+indicate the level of purity of a function.
+
+This means a function such as the following
+
+\inputcode{}{example_6.py}
+
+may be compiled to an intermediate language like
+
+\inputcode{}{example_7.py}
+
+\subsection*{$\vert$ Interference Detection}
+
+To implement the second example where parallelism is achieved by looking at blocks of code
+that do not interfere, we will solve a similar problem as register allocation. First
+we will need to discover which parts of the code are separate from what other parts of the code.
+
+Once again we will have a notion of purity. And we will know that all impure code will need
+to be executed in their relative orders.
+
+Because of the above, code section analysis must be done in three steps. First is separating pure
+code from impure code. Second is detecting dependency relationships among the blocks of code.
+Then, using this information, we can build an interference graph that show us what must be computed
+sequentially, and what may be computed in parallel. Then, with our graph, we can trace the
+execution of threads to optimally choose the number of threads to execute.
+
+Separating pure and impure functions may be computed statement by statement and then each may be
+globed together by their type. Once we have the impure and the pure code separated, we can detect
+which blocks of code are dependent on others. All impure code block have an implicit temporal
+dependency. Finally, code segments that do not interfere with each other may be parallelized.
+
+\vspace{\textheight}
+\end{multicols}
+\end{document}
