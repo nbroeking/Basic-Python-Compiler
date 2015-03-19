@@ -7,6 +7,8 @@
 \usepackage[margin=1.0in]{geometry}
 \usepackage{multicol}
 \usepackage{titlesec}
+\usepackage{filecontents}
+\usepackage{url}
 
 \definecolor{airforceblue}{rgb}{0.36, 0.54, 0.66}
 \definecolor{secblue}{rgb}{0.18, 0.27, 0.33}
@@ -19,44 +21,68 @@
     (Proposal)}
 \author{Nicolas Broeking \and Joshua Rahm}
 
+\begin{filecontents}{bib.bib}
+@book{acm,
+title = {Partitioned Global Address Space Languages.},
+author = {Mattias De Wael, Stefan Marr, Bruno De Fraine, Tom Van Cutsem, Wolfgang De Meuter},
+publisher = {ACCM Computing Surveys},
+year = {2016},
+}
+
+@misc{delivery,
+  author = {Christoph von Praun, Luis Ceze, Calin Cascaval},
+  title = {{Implicit Parallelism with Ordered Transactions}},
+  howpublished = "\url{https://homes.cs.washington.edu/~luisceze/publications/ipot_ppopp07.pdf}",
+  note = "[Online; accessed 16-March-2015]"
+}
+
+@misc{dynamic,
+  author = {Haiying Xu, Christopher J. F. Pickett, Clark Verbrugge},
+  title = {{Dynmaic Purity Analysis for Java Programs}},
+  howpublished = "\url{http://www.sable.mcgill.ca/~cpicke/papers/xu-07-dynamic.pdf}",
+  note = "[Online; accessed 16-March-2015]"
+}
+\end{filecontents}
+
+
 \begin{document}
-\begin{titlepage}
+\nocite{*}
 \maketitle
+\hrule
 
-\end{titlepage}
-
-\raggedcolumns
+% \raggedcolumns
 \begin{multicols}{2}
-\raggedcolumns
+% \raggedcolumns
 
 \begin{abstract}
 
-As we make our way into the second half of the second decade of the
-third millennium, Moore's law has finally begun to wane as processor
-clock speed have begun to stagnate. However, while processor clock
-speeds have remained the same, processors are starting to have more and
-more cores. How to use these cores effectively is still a hard problem
-in software engineering especially because parallel processing requires
-careful attention to protect against race conditions and other caveats.
-As a result, the approach many languages take is to outlaw true parallel
-processing, but we believe that the answer is to bake parallel
-processing into the emitted assembly code so that the programmer never
-need to know of its existence, but may still enjoy the many benefits of
-a multi-core machine.
+As we make our way into the second half of the second decade of the third
+millennium, Moore's law has finally begun to wane as processor clock speed have
+started to stagnate. However, while processor clock speeds remain the same, the
+number of cores in a processor has drastically increased. This is especially
+true with the advent of general purpose GPUs (GPGPUs). How to use these cores
+effectively is still a hard problem in software engineering especially because
+parallel processing requires careful attention to protect against race
+conditions and other caveats.  As a result, the approach many languages take is
+to outlaw true parallel processing, but we believe that the answer is to bake
+parallel processing into the emitted assembly code so that the programmer never
+need to know of its existence, but may still enjoy the many benefits of a
+multi-core machine.
 
 \end{abstract}
 
-\section*{Group}
+\section{Group}
 \backslashx is us; Nicolas Broeking and
 Joshua Rahm. We are graduate students at the University of Colorado
 Boulder with interests in Systems Development and Telecommunications.
 
-\section*{Problem} In software engineering, parallelism is still a very
-under used feature.  While many programs require the programmer to
-implement parallelism explicitly others may simply rely on the operating
-system to achieve multiprocessing and use the message passing mechanisms
-of the operating system to share data.  Each of these approaches have
-their benefits and their pitfalls.
+\section{Problem} In software engineering, parallelism is still a very under
+used featu
+implement parallelism explicitly, such as C/C++ and Java, others, such as
+Python and Ruby, must simply rely on the operating system's multiprocessing
+facilities to manage multiple instances of the program and use the IPC
+mechanisms of the operating system to share data.  Each of these approaches
+have their benefits and their pitfalls.
 
 In the latter case, it is well known that a context switch between two
 different processes is \emph{much} slower than threads, not to mention
@@ -75,7 +101,7 @@ to use it to its full advantage, and yet the shared nature of threads
 implies that if a single thread has a bug, then it may cause the entire
 system to crash.
 
-\section*{Proposal}
+\section{Proposal}
 
 We propose to go around the manual, explicit implementation and instead
 let the compiler use a thread pool to parallelize problems implicitly.
@@ -119,11 +145,11 @@ and other. This means we can rearrange this program to
 
 And we can then parallelize this as we did the first example.
 
-\section*{Approach}
+\section{Approach}
 
 Python is a dynamically typed programming language that naturally does in many
 ways limit its ability to be effectively parallelized which will force us to
-work with a subset of the Python Programming Language that will allow us to
+work with a subset of the Python Programming Language, $p_3$, that will allow us to
 implement our improvements under the assumption that the user has not
 overridden certain operators and types.
 
@@ -131,6 +157,8 @@ With these fairly limited changes to the Python language, we are still left with
 the challenge of parallelizing a program which we have limited knowledge of at compile time.
 Since this is the case, we will need to, at compile time, add many clues to indicate what
 may be optimized and what may not be able to. This will add several phases to our compiler.
+
+In order to accomplish our tasks we will extend the course compiler with two new phases, Purity Analysis and Interference Detection. 
 
 \subsection*{$\vert$ Purity Analysis}
 
@@ -188,6 +216,26 @@ Separating pure and impure functions may be computed statement by statement and 
 globed together by their type. Once we have the impure and the pure code separated, we can detect
 which blocks of code are dependent on others. All impure code block have an implicit temporal
 dependency. Finally, code segments that do not interfere with each other may be parallelized.
+
+\section{Literature Survey}
+
+Our approach will add the ability, at runtime, detect what aspects of the code may be able to be parallelized In a dynamically typed language. The sources we have found have provided insights on how to implicitly parallelize a traditional, statically typed language, but we are attempting to extend their work to parallelize a dynamically typed language. The work done by HAL achieved parallelism by using
+Partitioned Global Address Space Languages (PGAS). Another group, from IBM and The University of Illinois, achieved implicit parallelism
+using ordered transactions (IPOT). Both of these frameworks provide many insights into the implementation of implicit parallelization; we
+will use both of these insights in the design of our final compiler.
+
+\section{Evaluation}
+
+We will evaluate our success via a couple of metrics. First, we will consider our project successful
+if we are able to successfully compile and be semantically correct while using parallel processing.
+
+Better performance of the tests relative to the original compiler is not necessarily a requirement for
+success, as we realize that of the tests are too small to gain much from multiple threads. However,
+the project will be a great success if we are able to see significant improvement in the runtime
+of our test suite.
+
+\bibliographystyle{abbrv}
+\bibliography{bib}
 
 \vspace{\textheight}
 \end{multicols}
