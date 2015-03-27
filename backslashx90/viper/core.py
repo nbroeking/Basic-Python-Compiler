@@ -14,6 +14,13 @@ class CoreNode:
     def __str__(self):
         return self._to_str()
 
+class CoreClass:
+    def __init__(self, name):
+        self.name = name
+
+    def _to_str(self):
+        return "Class %s"% self.name
+
 class Comment(CoreNode):
     def __init__(self, comment):
         self.comment = comment
