@@ -1,0 +1,2 @@
+class davis:
+    0
