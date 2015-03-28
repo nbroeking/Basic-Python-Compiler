@@ -250,3 +250,29 @@ class Div(CoreNode):
 
     def _to_str(self):
         return "(%s / %s)" % (self.lhs._to_str(), self.rhs._to_str())
+
+class AllocClass(CoreNode):
+    def __init__(self):
+        pass
+
+    def _to_str(self):
+        return "AllocClass()"
+
+class SetAttr(CoreNode):
+    def __init__(self, lhs, attr, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+        self.attr = attr
+
+    def _to_str(self):
+        return "SetAttr(%s, %s, %s)" % (self.lhs, self.attr, self.rhs)
+
+class GetAttr(CoreNode):
+    def __init__(self, lhs, attr):
+        self.lhs = lhs
+        self.attr = attr
+
+    def _to_str(self):
+        return "GetAttr(%s, %s)" % (self.lhs, self.attr)
+        
+        

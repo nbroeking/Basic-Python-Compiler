@@ -9,6 +9,8 @@ import compiler.ast as pyast
 import compiler as comp
 import stage1 as flat
 import stage2 as reg
+from declassify import declassify
+
 
 try:
     import viper.core as core
@@ -58,6 +60,20 @@ def main( argv):
     defs = preproc.preprocess_functions(ast)
     defsmap = dict([(i.name,i) for i in defs])
 
+
+    print "\n-------- Before declassify --------------"
+    for fn in defs:
+        print "AST: ", fn.pyast
+    for fn in defs:
+        new_ast = declassify(fn.get_ast())
+        fn.set_ast(new_ast)
+
+
+    print "\n-------- Function Defs --------------"
+    for fn in defs:
+        print "AST: ", fn.pyast
+
+    print "\n--------------------------\n"
     for fn in defs:
         flattened = flat.flatten(fn.get_ast(), True)
         fn.set_ast(flattened)
@@ -69,16 +85,18 @@ def main( argv):
 
 #Register Allocation
 
+    global_data_section = {}
     for fn in defs:
         print "--------", fn.name, "----------"
-        tree = reg.selection(fn.get_ast(), defsmap, fn.name);
+        (data_section, tree) = reg.selection(fn.get_ast(), defsmap, fn.name);
+        global_data_section.update(data_section)
         fn.set_ast(tree)
 
     total = []
     for fn in defs:
         total += fn.build_final_asm_tree()
 #Print the ASM tree to a file
-    printer.output(total, outfile, len(defsmap[preproc.mangle("","main")].parent_closure) )
+    printer.output(total, outfile, len(defsmap[preproc.mangle("","main")].parent_closure), global_data_section)
 
 if __name__ == "__main__":
     main(sys.argv)

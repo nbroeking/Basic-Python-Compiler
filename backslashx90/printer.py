@@ -1,8 +1,8 @@
 # Instruction Selection
 #
-def output(ast, fname, n):
+def output(ast, fname, n, data_section):
     Print = printer(fname);
-    Print.output(ast,n);
+    Print.output(ast,n,data_section);
 
 def printTree(ast, fname):
     pp = printer(fname);
@@ -24,10 +24,15 @@ class printer:
     def emit(self, line):
         self.out.write( line + '\n' );
 
-    def output(self, ast, nfreevars):
+    def output(self, ast, nfreevars, data_section):
         self.emit( '.data' );
         self.emit( 'puke_msg:' )
         self.emit( '.asciz \"There was a runtime error. PUKE.\\n\"' )
+
+        for (k, v) in data_section.items():
+            self.emit('%s:' % v)
+            self.emit('.asciz \"%s\"' % k)
+
         self.emit( '.text' );
 
         self.emit( '''

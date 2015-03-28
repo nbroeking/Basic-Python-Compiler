@@ -19,10 +19,15 @@ from function_comb import FnName, mangle
 #Perform Register Selection
 def selection(ast, defs, fname):
     st2 = Stage2();
-    return st2.assemble(ast, defs, fname);
+    lst = st2.assemble(ast, defs, fname);
+    return (st2.data_section, lst)
 
 #The Register Selection Object
 class Stage2:
+    data_nonce = 0
+    data_section = {}
+    current_strings = set()
+
     def __init__(self):
         self.namenum = 0
         self.labelnum = 0
@@ -38,6 +43,15 @@ class Stage2:
         ret = self.labelnum
         self.labelnum += 1
         return ret
+
+    def create_string(self, string):
+        if not string in Stage2.data_section:
+            name = ".str_%d" % Stage2.data_nonce
+            Stage2.data_nonce += 1
+            Stage2.data_section[string] = name
+        else:
+            name = Stage2.data_section[string]
+        return name
 
 #Create the Asm tree and then Allocate Registers
     def assemble(self, ast, defs, fname):
@@ -257,6 +271,34 @@ class Stage2:
 
                         ] ))
 
+                elif isinstance(op, core.AllocClass):
+                    parent_list = var_caller_saved(self.tmpvar())
+                    vname = var_caller_saved(name)
+                    self.save_registers(16)
+                    # TODO does not support inheritence
+                    self.addAsm(Movl(var_const("0"), var_raw_mem("(%esp)")))
+                    self.addAsm(Call("create_list"));
+                    self.addAsm(Addl(var_const("3"), var_raw("%eax")))
+                    self.addAsm(Movl(var_raw("%eax"), parent_list))
+                    self.restore_registers(16)
+
+                    self.save_registers(16)
+                    self.addAsm(Movl(parent_list, var_raw_mem("(%esp)")))
+                    self.addAsm(Call("create_class"))
+                    self.addAsm(Addl(var_const("3"), var_raw("%eax")))
+                    self.addAsm(Movl(var_raw("%eax"), vname))
+                    self.restore_registers(16)
+
+                elif isinstance(op, core.GetAttr):
+                    vname = var_caller_saved(name)
+                    strptr = self.create_string(op.attr)
+                    self.save_registers(20)
+                    self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)")))
+                    self.addAsm(Movl(var_const(strptr), var_raw_mem("4(%esp)")))
+                    self.addAsm(Call("get_attr"))
+                    self.addAsm(Movl(var_raw("%eax"), vname))
+                    self.restore_registers(20)
+
                 elif isinstance(op, core.Is):
                     vname = var_spill(name)
                     t1 = AsmVar(self.tmpvar())
@@ -343,7 +385,16 @@ class Stage2:
 
                 self.update_closure(myfunction, name)
 
-
+            elif isinstance(ast, core.SetAttr):
+                op = ast
+                strptr = self.create_string(op.attr)
+                self.save_registers(24)
+                self.addAsm(Movl(self.to_base_asm(op.lhs), var_raw_mem("(%esp)")))
+                self.addAsm(Movl(var_const(strptr), var_raw_mem("4(%esp)")))
+                self.addAsm(Movl(self.to_base_asm(op.rhs), var_raw_mem("8(%esp)")))
+                self.addAsm(Call("set_attr"))
+                self.restore_registers(24)
+                
             elif isinstance(ast, core.If):
                 cond = ast.cond
                 thens = ast.then_stmts

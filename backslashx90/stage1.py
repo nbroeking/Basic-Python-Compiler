@@ -6,6 +6,7 @@
 # for the compiler
 
 import compiler.ast as pyast
+import declassify as dec
 try:
     import viper.core as core
 except:
@@ -285,6 +286,19 @@ class Stage1:
             self.buffer += [core.Return(rhs_prime)]
             return None
 
+        if isinstance( pyst, dec.SetAttr ): 
+            lhs = self.flatten_to_var(pyst.lhs)
+            rhs = self.flatten_to_var(pyst.rhs)
+
+            self.buffer.append(core.SetAttr(lhs, pyst.attr, rhs))
+            return None
+
+        if isinstance(pyst, dec.GetAttr):
+            lhs = self.flatten_to_var(pyst.lhs)           
+            tmp = self.tmpvar()
+            self.buffer.append(core.Assign(tmp, core.GetAttr(lhs, pyst.attr)))
+            return tmp
+
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
 
@@ -346,6 +360,19 @@ class Stage1:
                 callfunc = core.CallFunc(core.Name("set_subscript2"), [var, rhs_flat, to_assign])
                 self.buffer += [core.Assign(retvar, callfunc)]
                 return retvar
+
+            elif isinstance(pyst.getChildren()[0], pyast.AssAttr):
+                (lhs, name, _) = pyst.getChildren()[0].getChildren()
+                lhs_flat = self.flatten_to_var(lhs)
+                rhs = pyst.getChildren()[1]
+                rhs_flat = self.flatten_to_var(rhs)
+                self.buffer += [core.SetAttr(lhs_flat, name, rhs_flat)]
+                return None
+                
+
+            elif isinstance(pyst.getChildren()[1], dec.MkClass):
+                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], core.AllocClass())]
+                return None
 
             else:
                 # if instance of assign, flatten the rhs
