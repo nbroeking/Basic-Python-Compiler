@@ -366,20 +366,35 @@ class Stage2:
                     args = op.args
                     n_bytes = 16 + (len(args) << 2)
 
-                    self.save_registers(n_bytes);
+                    #get tag
+                    closure = op.lhs.name
+                    type_of_object_var = AsmVar(self.tmpvar())
+                    vname = var_caller_saved(name)
 
+                    self.addAsm(Movl(var_const("0xdeadbeef"), vname))
+                    self.addAsm(Movl(AsmVar(closure, 0, 0), type_of_object_var))
+                    self.addAsm(Cmpl(var_const("6"), type_of_object_var)) # 6 is the bound type
+
+                    # then
+                    thens = []
+                    thens.append(Movl(var_raw("%eax"), vname))
+
+                    # else
+                    elses = self.save_registers_arr(n_bytes);
                     idx = 0
                     for i in args:
-                        self.AsmTree.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        elses.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
                     tmpname = self.tmpvar()
-                    self.addAsm( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
-                    self.addAsm( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
-                    self.AsmTree.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
-                    self.AsmTree.append(CallStar(AsmVar(tmpname, 0, 4)))
-                    self.AsmTree.append(Movl(AsmVar("%eax", RAW), AsmVar(name, CALLER_SAVED)))
-                    self.restore_registers(n_bytes)
+                    elses.append( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
+                    elses.append( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
+                    elses.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
+                    elses.append(CallStar(AsmVar(tmpname, 0, 4)))
+                    elses.append(Movl(var_raw("%eax"), vname))
+                    elses += self.restore_registers_arr(n_bytes)
+                    
+                    self.addAsm(If(ZERO, thens, elses))
 
                 # }}}
 

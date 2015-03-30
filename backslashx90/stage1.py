@@ -81,6 +81,13 @@ class Stage1:
             # finally gave in
             self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
         else:
+            # $0$_c = CallFunc("is_class", [lhs_prime])
+            # if $0$_c then
+            #     var = CallFunc("create_object", [$0$_c])
+            #     $1$_c = CallFunc("getattr", [var, raw_string("__init__")])
+            #     CallClosure($1$_c)
+            # else 
+            #     var = CallClosure(lhs_prime)
             self.buffer += [core.Assign(var, core.CallClosure(lhs_prime, newargs))]
         return var
 

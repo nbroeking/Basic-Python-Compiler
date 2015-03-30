@@ -75,7 +75,7 @@ function run_test {
             diff <(echo $this) <(echo $real) > /dev/null
     
             if [ $? -eq 0 ] ; then
-                echo "${green}PASS${cyan}] $green|"  
+                echo "${cyan}PASS${cyan}] $green|"  
                 passed=$(($passed + 1))
             else
                 echo "${red}FAIL${cyan}] $green|"  
