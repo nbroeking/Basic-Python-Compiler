@@ -1,6 +1,8 @@
 import compiler.ast as ast
 import printer
 
+from declassify import GetAttr
+
 try:
     from viper.AsmTree import *
 except:
@@ -65,7 +67,6 @@ class DefinedFunction:
             Label("%s" % self.name),
         ] + preamble + self.pyast + [Label(".%s_ret" % self.name)] + postamble + \
             [Comment("}")]
-        
 
 # there are two stages to breaking out the functions,
 # the first is to find them, break them out, and
@@ -86,7 +87,7 @@ def preprocess_functions(pyst):
         (newast, fnlst) = loose_preprocess_functions(pyst, mangle("", "main"))
 
         fn = ast.Function(None, "main", [], [], 0, None, newast)
-        rootfn = (fn, fnlst)
+        rootfn = (fn, mangle("","main"), fnlst)
 
         defn = to_defined_function(rootfn, "", {}) # return DefinedFunction
         return flatten_function_tree(defn)
@@ -112,10 +113,9 @@ def set_to_map(s):
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
 def to_defined_function(function_p, parent_name, parent_closure):
-    (parent, children) = function_p
-
+    (parent, mname, children) = function_p
+    
     (_, name, args, _, _, stmts) = parent.getChildren()
-    mname = mangle(parent_name, name)
     (free_vars, assign_vars) = get_free_vars(stmts)
 
     # this function's closure
@@ -228,7 +228,7 @@ def loose_preprocess_functions(pyast,a_name):
                     
                     
                 (stmts_prime, fns) = loose_preprocess_functions(stmts,mname)
-                new_func = (ast.Function(None, name, args, [], 0, None, stmts_prime), fns)
+                new_func = (ast.Function(None, name, args, [], 0, None, stmts_prime), mname, fns)
 
                 functionlist.append(new_func)
 
@@ -252,6 +252,11 @@ def loose_preprocess_functions(pyast,a_name):
         else:
             ret_prime = pyast.__class__((lhs_prime, rhs_prime))
         return (ret_prime, rfns + lfns)
+
+    elif isinstance(pyast, ast.Getattr):
+        (lhs, name) = pyast.getChildren()
+        (lhs_prime, lfns) = loose_preprocess_functions(lhs, a_name)
+        return (GetAttr(lhs_prime, name), lfns)
     
     elif isinstance(pyast, ast.Compare):
         rhs = pyast.getChildren()[2]
@@ -271,7 +276,7 @@ def loose_preprocess_functions(pyast,a_name):
         args = pyast.getChildren()[0]
         (stmt, fns) = loose_preprocess_functions(pyast.getChildren()[2], mname)
         stmt_p = ast.Stmt([ast.Return(stmt)])
-        fn = (ast.Function(None, name, args, [], 0, None, stmt_p), fns)
+        fn = (ast.Function(None, name, args, [], 0, None, stmt_p), mname, fns)
 
         return (FnName(mname), [fn])
 
@@ -299,6 +304,11 @@ def loose_preprocess_functions(pyast,a_name):
     elif isinstance(pyast, (ast.Const, ast.Name, ast.AssName)):
         # these are the base cases
         return (pyast, [])
+
+    elif isinstance(pyast, ast.AssAttr):
+        (lhs, name, op) = pyast.getChildren()
+        (lhs_prime, fns) = loose_preprocess_functions(lhs, a_name)
+        return (ast.AssAttr(lhs_prime, name, op), fns)
     
     elif isinstance(pyast, ast.If):
         (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0],a_name)
@@ -341,6 +351,18 @@ def loose_preprocess_functions(pyast,a_name):
             fns += kf + vf
             retlst.append((kp, vp))
         return (ast.Dict(retlst), fns)
+
+    elif isinstance(pyast, ast.Class):
+        # pull out all class functions and make them
+        # their own functions
+        
+        # descend into the statements
+        (stmts,) = pyast.getChildNodes()
+        n_name = mangle(a_name, pyast.getChildren()[0])
+        (stmts_p, fns) = loose_preprocess_functions(stmts, n_name)
+
+        # TODO: NOTE for nic and josh we dont handle inhertence here
+        return (ast.Class(pyast.getChildren()[0], [], None, stmts_p), fns)
 
         
 

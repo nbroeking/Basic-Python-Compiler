@@ -1,0 +1,56 @@
+\newcommand{\backslashx}[0]{\textsc{Backslash x90 }}
+
+\titleformat{\section}
+  {\normalfont\scshape\color{secblue}}{\thesection}{1em}{}
+
+\titleformat{\subsection}
+  {\color{secblue}}{ \thesection}{1em}{}
+
+\fancypagestyle{plain}{
+    \fancyhf{}
+    % \fancyhead[R]{\textcolor{blue}{\hrule}}
+    \fancyhead[L]{\textcolor{airforceblue}{\textbf{\backslashx}}}
+    \fancyhead[R]{\textcolor{airforceblue}{\textbf{Implicit Parallelism at Runtime in Compiled Python Programs}}}
+    \renewcommand{\headrulewidth}{2pt}% 2pt header rule
+    \renewcommand{\headrule}{\hbox to\headwidth{%
+        \color{airforceblue}\leaders\hrule height \headrulewidth\hfill}}
+
+    % \fancyhead[R]{\textcolor{blue}{\hrule}}
+    \fancyfoot[R]{\thepage}
+    \renewcommand{\footrulewidth}{2pt}% 2pt header rule
+    \renewcommand{\footrule}{\hbox to\headwidth{%
+        \color{airforceblue}\leaders\hrule height \headrulewidth\hfill}}
+}
+
+\usepackage[framemethod=TikZ]{mdframed}% Required for creating boxes
+\mdfdefinestyle{left}{
+    linecolor=gray, % Outer line color
+%    frametitlerule=true, % Title rule - true or false
+%    frametitlerulecolor=gray, % Title rule color
+%    frametitlerulewidth=0.5pt % Title rule width
+%    outerlinewidth=0.5pt, % Outer line width
+%    roundcorner=0pt, % Amount of corner rounding
+%    innertopmargin=0pt, % Top margin
+%    innerbottommargin=0pt, % Bottom margin
+%    innerrightmargin=0pt, % Right margin
+%    innerleftmargin=10pt, % Left margin
+%    leftmargin=12pt, % Left margin
+%    backgroundcolor=white, % Box background color
+%    frametitlebackgroundcolor=white, % Title background color
+%    frametitlefont=\Large, % Title heading font specification
+%    font=\small,
+    leftline=false,
+    topline=false,
+    rightline=false,
+    bottomline=false
+}
+
+\mdfsetup{nobreak=true}
+
+\newcommand{\inputcode}[2]{
+\begin{mdframed}[style=left,frametitle={\color{secblue}\emph{#1}}]
+\begin{minipage}{\textwidth}
+\inputminted{py}{#2}
+\end{minipage}
+\end{mdframed}
+}
