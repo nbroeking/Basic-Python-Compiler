@@ -56,6 +56,8 @@ def main( argv):
 #Flatten
     # defs :: [DefinedFunction]
     defs = preproc.preprocess_functions(ast)
+    for i in defs:
+        print "DefinedFunction " + i.name
     defsmap = dict([(i.name,i) for i in defs])
 
     for fn in defs:

@@ -194,6 +194,7 @@ class FnName:
 # ast (modified from lambdas to identifiers) and the list
 # is an array of function ast nodes
 
+# a_name is the mangled name of the parent function
 def loose_preprocess_functions(pyast,a_name):
     global nonce
     # list of ASTs of the functions to pull out
