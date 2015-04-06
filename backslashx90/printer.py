@@ -29,6 +29,9 @@ class printer:
         self.emit( 'puke_msg:' )
         self.emit( '.asciz \"There was a runtime error. PUKE.\\n\"' )
 
+        self.emit('__init__str__:')
+        self.emit('.asciz \"__init__\"')
+
         for (k, v) in data_section.items():
             self.emit('%s:' % v)
             self.emit('.asciz \"%s\"' % k)

@@ -23,6 +23,7 @@ class declassifier:
                 retnodes.append(ast.Assign([ast.AssName(class_name, 'OP_ASSIGN')], MkClass()));
                 for i in class_stmts:
                     if isinstance(i, ast.Assign):
+                        """ Assign to the class name instead """
                         (assname, rhs) = i.getChildNodes()
                         name = assname.getChildren()[0]
                         retnodes.append(SetAttr(ast.Name(class_name), name, rhs))
@@ -32,6 +33,25 @@ class declassifier:
                 retnodes.append(stmt)
         return ast.Stmt(retnodes);
 
+class UnboundMethod:
+    def __init__(self, name):
+        self.name = name
+
+    def getChildNodes(self):
+        return []
+
+    def getChildren(self):
+        return []
+
+    def _to_str(self):
+        return "UnboundMethod(%s)" % self.name
+
+    def __str__(self):
+        return self._to_str()
+
+    def __repr__(self):
+        return self._to_str()
+
 class SetAttr:
     def __init__(self, lhs, attr, rhs):
         # attr :: String
@@ -39,13 +59,35 @@ class SetAttr:
         self.attr = attr 
         self.rhs = rhs
 
+    def getChildNodes(self):
+        return [self.lhs, self.rhs]
+
+    def _to_str(self):
+        return self.__str__()
+
+    def __repr__(self):
+        return self._to_str()
+
     def __str__(self):
         return "SetAttr(%s, %s)" % (self.lhs, self.attr)
+
 
 class GetAttr:
     def __init__(self, lhs, attr):
         self.lhs = lhs
         self.attr = attr
+
+    def getChildNodes(self):
+        return [self.lhs]
+
+    def getChildren(self):
+        return self.getChildNodes()
+
+    def _to_str(self):
+        return self.__str__()
+
+    def __repr__(self):
+        return self._to_str()
 
     def __str__(self):
         return "GetAttr(%s, %s)" % (self.lhs, self.attr)
@@ -53,6 +95,12 @@ class GetAttr:
 class MkClass:
     def __init__(self):
         pass
+
+    def getChildNodes(self):
+        return []
+
+    def getChildren(self):
+        return []
 
     def __str__(self):  
         return "MkClass()"

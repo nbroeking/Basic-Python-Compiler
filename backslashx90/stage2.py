@@ -367,17 +367,54 @@ class Stage2:
                     n_bytes = 16 + (len(args) << 2)
 
                     #get tag
-                    closure = op.lhs.name
+                    closure_var = AsmVar(op.lhs.name)
                     type_of_object_var = AsmVar(self.tmpvar())
-                    vname = var_caller_saved(name)
+                    vname = AsmVar(name)
 
-                    self.addAsm(Movl(var_const("0xdeadbeef"), vname))
-                    self.addAsm(Movl(AsmVar(closure, 0, 0), type_of_object_var))
-                    self.addAsm(Cmpl(var_const("6"), type_of_object_var)) # 6 is the bound type
+                    vreturn = var_caller_saved(self.tmpvar())
+                    closure_project = self.tmpvar()
 
-                    # then
+                    self.addAsm(Movl(closure_var, AsmVar(closure_project)))
+                    self.addAsm(Andl(var_const("0xFFFFFFFC"), AsmVar(closure_project)))
+                    self.addAsm(Movl(AsmVar(closure_project, 0, 0), type_of_object_var))
+                    self.addAsm(Cmpl(var_const("3"), type_of_object_var)) # 6 is the bound type
+
+                    # then (if object is a class)
                     thens = []
-                    thens.append(Movl(var_raw("%eax"), vname))
+                    
+                    class_var = closure_var # the "closure is the class"
+
+                    # allocating the object
+                    thens += self.save_registers_arr(16)
+                    thens.append(Movl(class_var, var_raw_mem("(%esp)")))
+                    thens.append(Call("create_object"))
+                    thens.append(Movl(var_raw("%eax"), vreturn))
+                    thens += self.restore_registers_arr(16)
+                    thens.append(Movl(vreturn, vname))
+
+                    # getting the init variable the object
+                    thens += self.save_registers_arr(20)
+                    thens.append(Movl(vreturn, var_raw_mem("(%esp)")))
+                    thens.append(Movl(var_const("__init__str__"), var_raw_mem("4(%esp)")))
+                    thens.append(Call("get_attr"))
+                    thens.append(Movl(var_raw("%eax"), vreturn))
+                    thens += self.restore_registers_arr(20)
+
+                    # call the bound method (found at vreturn)
+                    thens += self.save_registers_arr(n_bytes + 4)
+                    thens.append(Movl(vname, var_raw_mem("(%esp)")))
+                    idx = 4
+                    for i in args:
+                        thens.append(Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        idx += 4
+
+                    tmpname = self.tmpvar() # closure
+                    thens.append(Movl(vreturn, AsmVar(tmpname)))
+                    thens.append(Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)))
+                    thens.append(Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx))) # environment
+                    thens.append(CallStar(AsmVar(tmpname, 0, 4))) # call function
+                    thens += self.restore_registers_arr(n_bytes + 4)
+
 
                     # else
                     elses = self.save_registers_arr(n_bytes);
@@ -386,15 +423,16 @@ class Stage2:
                         elses.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
-                    tmpname = self.tmpvar()
+                    tmpname = self.tmpvar() # environment?
                     elses.append( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
                     elses.append( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
                     elses.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
                     elses.append(CallStar(AsmVar(tmpname, 0, 4)))
-                    elses.append(Movl(var_raw("%eax"), vname))
+                    elses.append(Movl(var_raw("%eax"), vreturn))
                     elses += self.restore_registers_arr(n_bytes)
                     
                     self.addAsm(If(ZERO, thens, elses))
+                    self.addAsm(Movl(vreturn, vname))
 
                 # }}}
 

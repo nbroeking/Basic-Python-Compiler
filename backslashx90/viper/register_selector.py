@@ -117,7 +117,7 @@ class Allocation:
         if var.isRaw(): # constant
             return var
         else:
-            return AsmVar(self.get_mapping( colors[var] ) + "", var.mask, var.dref_off)
+            return AsmVar(self.get_mapping( colors[var] ) + "", var.mask | RAW, var.dref_off)
 
     #changes all variable names
     def simple_sub( self, asm_tree, colors ):

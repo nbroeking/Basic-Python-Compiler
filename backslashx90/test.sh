@@ -54,8 +54,8 @@ failed=0
 function run_test {
     i=$1
     in_file=$(echo $i | sed 's/py$/in/g')
-    real_input=$([ -f $in_file ] && cat $in_file || echo -e $input)
-    real="$(echo -e "$real_input" | python2 $i)"
+    real_input=$([ -f $in_file ] && cat $in_file || echo -e "$input")
+    real="$(echo -e "$real_input" | python2 $i 2>&1)"
     if [ $? -ne 0 ] ; then
         echo "${red}$i: Bad test. Python fails${nc}"
         echo "$real"
