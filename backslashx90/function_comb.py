@@ -360,12 +360,11 @@ def loose_preprocess_functions(pyast,a_name):
         # their own functions
         
         # descend into the statements
-        (stmts,) = pyast.getChildNodes()
+        stmts = pyast.getChildNodes()[-1]
         n_name = mangle(a_name, pyast.getChildren()[0])
         (stmts_p, fns) = loose_preprocess_functions(stmts, n_name)
 
-        # TODO: NOTE for nic and josh we dont handle inhertence here
-        return (ast.Class(pyast.getChildren()[0], [], None, stmts_p), fns)
+        return (ast.Class(pyast.getChildren()[0], pyast.getChildNodes()[0:-1], None, stmts_p), fns)
 
         
 

@@ -309,7 +309,7 @@ class Stage1:
             return tmp
 
         else:
-            raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__)
+            raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__ + ' ' + str(pyst))
 
     #Losse Flattens a comparison
     def loose_flatten_compare(self, pyst):
@@ -380,7 +380,8 @@ class Stage1:
                 
 
             elif isinstance(pyst.getChildren()[1], dec.MkClass):
-                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], core.AllocClass())]
+                clazz = pyst.getChildren()[1]
+                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], core.AllocClass(clazz.bases.getChildren()[0]))]
                 return None
 
             else:

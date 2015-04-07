@@ -19,9 +19,14 @@ class declassifier:
                 print "The statement is a CLASS MOFO!!!"
 
                 clazz = stmt
-                (class_stmts,) = clazz.getChildNodes()
+                class_stmts = clazz.getChildNodes()[-1]
                 class_name = clazz.getChildren()[0]
-                retnodes.append(ast.Assign([ast.AssName(class_name, 'OP_ASSIGN')], MkClass()));
+
+                print "RIGHT HERE TAG + SHIT " + str(clazz.getChildNodes())
+                bases = clazz.getChildNodes()[0:-1]
+
+                retnodes.append(ast.Assign([ast.AssName("$class_bases_", 'OP_ASSIGN')], ast.List(bases)))
+                retnodes.append(ast.Assign([ast.AssName(class_name, 'OP_ASSIGN')], MkClass(ast.Name("$class_bases_"))));
                 retnodes.append(SetAttr(ast.Name(class_name), "__init__", fn.FnName("_default_init_fn_")))
                 for i in class_stmts:
                     if isinstance(i, ast.Assign):
@@ -95,14 +100,15 @@ class GetAttr:
         return "GetAttr(%s, %s)" % (self.lhs, self.attr)
         
 class MkClass:
-    def __init__(self):
+    def __init__(self, bases):
+        self.bases = bases
         pass
 
     def getChildNodes(self):
-        return []
+        return self.bases
 
     def getChildren(self):
-        return []
+        return self.bases
 
     def __str__(self):  
-        return "MkClass()"
+        return "MkClass(%s)" % str(self.bases)

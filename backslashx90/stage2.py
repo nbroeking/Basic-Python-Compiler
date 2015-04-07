@@ -272,18 +272,10 @@ class Stage2:
                         ] ))
 
                 elif isinstance(op, core.AllocClass):
-                    parent_list = var_caller_saved(self.tmpvar())
                     vname = var_caller_saved(name)
-                    self.save_registers(16)
-                    # TODO does not support inheritence
-                    self.addAsm(Movl(var_const("0"), var_raw_mem("(%esp)")))
-                    self.addAsm(Call("create_list"));
-                    self.addAsm(Addl(var_const("3"), var_raw("%eax")))
-                    self.addAsm(Movl(var_raw("%eax"), parent_list))
-                    self.restore_registers(16)
 
                     self.save_registers(16)
-                    self.addAsm(Movl(parent_list, var_raw_mem("(%esp)")))
+                    self.addAsm(Movl(AsmVar(op.parent_class_list), var_raw_mem("(%esp)")))
                     self.addAsm(Call("create_class"))
                     self.addAsm(Addl(var_const("3"), var_raw("%eax")))
                     self.addAsm(Movl(var_raw("%eax"), vname))
