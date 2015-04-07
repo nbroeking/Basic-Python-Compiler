@@ -1,4 +1,5 @@
 import compiler.ast as ast
+import function_comb as fn
 
 def declassify(ast):
     declass = declassifier()
@@ -21,6 +22,7 @@ class declassifier:
                 (class_stmts,) = clazz.getChildNodes()
                 class_name = clazz.getChildren()[0]
                 retnodes.append(ast.Assign([ast.AssName(class_name, 'OP_ASSIGN')], MkClass()));
+                retnodes.append(SetAttr(ast.Name(class_name), "__init__", fn.FnName("_default_init_fn_")))
                 for i in class_stmts:
                     if isinstance(i, ast.Assign):
                         """ Assign to the class name instead """

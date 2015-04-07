@@ -14,18 +14,18 @@ NREG = 6
 
 # Allocate Registers
 # return (tree, nstackvars)
-def allocate_registers( asm_tree ):
+def allocate_registers(asm_tree ):
     #Build the interference model
     alloc = Allocation()
 
     sets_asm = list(alloc.liveness_analysis( asm_tree[:] ))
     sets_asm.reverse()
 
-    print "------------- Liveness"
-    for x in sets_asm:
-        print "%-40s %s" % x
+    # print "------------- Liveness"
+    # for x in sets_asm:
+    #     print "%-40s %s" % x
 
-    print "-------------"
+    # print "-------------"
 
     (_, sets) = zip( *sets_asm ) if len(sets_asm) > 0 else ([],[])
    
@@ -65,10 +65,10 @@ def allocate_registers( asm_tree ):
         return allocate_registers( new_asm )
     else:
         asm_tree = alloc.flatten_ifs(asm_tree)
-        # print "---- Before Simple Sub ---"
-        # for x in asm_tree:
-        #     print x
-        # print"----\n"
+        print "---- Before Simple Sub ---"
+        for x in asm_tree:
+            print x
+        print"----\n"
 
         alloc.simple_sub(asm_tree, colors)
         # print "-----After Simple Sub---"
@@ -294,7 +294,7 @@ class Allocation:
                     if not t in ret_map:
                         ret_map[t] = set()
                     for v in l_after:
-                        if v != t: # and v != s:
+                        # if v != t: # and v != s:
                             self.add_interfere( ret_map, v, t )
     
             elif isinstance(instr, Addl) or \

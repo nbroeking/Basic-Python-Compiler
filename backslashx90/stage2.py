@@ -380,7 +380,7 @@ class Stage2:
                     self.addAsm(Cmpl(var_const("3"), type_of_object_var)) # 6 is the bound type
 
                     # then (if object is a class)
-                    thens = []
+                    thens = [Comment("If is a class")]
                     
                     class_var = closure_var # the "closure is the class"
 
@@ -389,6 +389,7 @@ class Stage2:
                     thens.append(Movl(class_var, var_raw_mem("(%esp)")))
                     thens.append(Call("create_object"))
                     thens.append(Movl(var_raw("%eax"), vreturn))
+                    thens.append(Addl(var_const("3"), vreturn))
                     thens += self.restore_registers_arr(16)
                     thens.append(Movl(vreturn, vname))
 
@@ -416,23 +417,46 @@ class Stage2:
                     thens += self.restore_registers_arr(n_bytes + 4)
 
 
+                    elses = []
+                    elses.append(Cmpl(var_const("6"), type_of_object_var))
+
+                    #If It is a bound method
+                    if_bound = [Comment("If is a bound function")]
+                    receiver_var = AsmVar(self.tmpvar())
+                    if_bound.append(Movl(AsmVar(closure_project, 0, 12), receiver_var))
+                    if_bound += self.save_registers_arr(n_bytes + 4)
+                    if_bound.append(Movl(receiver_var, var_raw_mem("(%esp)")))
+                    idx = 4
+                    for i in args:
+                        if_bound.append(Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        idx += 4
+                    tmpname = self.tmpvar() # environment?
+                    if_bound.append(Movl(AsmVar(closure_project, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
+                    if_bound.append(CallStar(AsmVar(closure_project, 0, 4)))
+                    if_bound.append(Movl(var_raw("%eax"), vreturn))
+                    if_bound += self.restore_registers_arr(n_bytes+4)
+                    if_bound.append(Movl(vreturn, vname))
+                    
+
                     # else
-                    elses = self.save_registers_arr(n_bytes);
+                    if_norm = [Comment("If is a normal function")]
+                    if_norm += self.save_registers_arr(n_bytes);
                     idx = 0
                     for i in args:
-                        elses.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        if_norm.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
                         idx += 4
 
                     tmpname = self.tmpvar() # environment?
-                    elses.append( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
-                    elses.append( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
-                    elses.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
-                    elses.append(CallStar(AsmVar(tmpname, 0, 4)))
-                    elses.append(Movl(var_raw("%eax"), vreturn))
-                    elses += self.restore_registers_arr(n_bytes)
+                    if_norm.append( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
+                    if_norm.append( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
+                    if_norm.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
+                    if_norm.append(CallStar(AsmVar(tmpname, 0, 4)))
+                    if_norm.append(Movl(var_raw("%eax"), vreturn))
+                    if_norm += self.restore_registers_arr(n_bytes)
+                    if_norm.append(Movl(vreturn, vname))
                     
+                    elses.append(If(ZERO, if_bound, if_norm))
                     self.addAsm(If(ZERO, thens, elses))
-                    self.addAsm(Movl(vreturn, vname))
 
                 # }}}
 

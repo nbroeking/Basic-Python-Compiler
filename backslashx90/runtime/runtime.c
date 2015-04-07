@@ -6,6 +6,8 @@
 
 #include "runtime.h"
 
+#define false 0
+
 int min(int x, int y) { return y < x ? y : x; }
 
 /* Some forward declarations */
@@ -628,10 +630,12 @@ big_pyobj* add(big_pyobj* a, big_pyobj* b) {
       return list_to_big(list_add(a->u.l, b->u.l));
     default:
       printf("error in add, expected a list\n");      
+      assert(false);
       exit(-1);
     }
   default:
     printf("error in add, expected a list\n");      
+      assert(false);
     exit(-1);
   }
 }
@@ -826,11 +830,12 @@ big_pyobj* create_class(pyobj bases)
 	  if (tag(*parent) == BIG_TAG && project_big(*parent)->tag == CLASS)
 	      ret->u.cl.parents[i] = project_big(*parent)->u.cl;
           else
-              exit(-1);
+              assert(false);
       }
       break;
   }
   default:
+    assert(false);
     exit(-1);
   }
   return ret;
@@ -845,6 +850,7 @@ big_pyobj* create_object(pyobj cl) {
     ret->u.obj.cl = clp->u.cl;
   else {
     printf("in make object, expected a class\n");
+              assert(false);
     exit(-1);
   }
   ret->u.obj.attrs = create_hashtable(2, attrname_hash, attrname_equal);
@@ -871,6 +877,7 @@ static pyobj* attrsearch(class cl, char* attr) {
     pyobj* ret = attrsearch_rec(cl, attr);
     if (ret == NULL) {
         printf("attribute %s not found\n", attr);
+              assert(false);
         exit(-1);
     }
     return ret;
@@ -951,6 +958,7 @@ big_pyobj* get_class(pyobj o)
     break;
   default:
     printf("get_class expected object or unbound method\n");
+              assert(false);
     exit(-1);
   }
   return ret;
@@ -967,6 +975,7 @@ big_pyobj* get_receiver(pyobj o)
     break;
   default:
     printf("get_receiver expected bound method\n");
+              assert(false);
     exit(-1);
   }
   return ret;
@@ -986,6 +995,7 @@ big_pyobj* get_function(pyobj o)
     break;
   default:
     printf("get_function expected a method\n");
+              assert(false);
     exit(-1);
   }
   return ret;
@@ -1018,6 +1028,7 @@ pyobj get_attr(pyobj c, char* attr)
   }  
   default:
     printf("error in get attribute, not a class or object\n");
+              assert(false);
     exit(-1);
   }
 }
@@ -1043,12 +1054,14 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
       break;
     default:
       printf("error, expected object or class in set attribute\n");
+              assert(false);
       exit(-1);
     }
 
     if(!hashtable_change(attrs, k, v))
         if(!hashtable_insert(attrs, k, v)) {
            printf("out of memory");
+              assert(false);
            exit(-1);
         }
     return val;
@@ -1056,5 +1069,6 @@ pyobj set_attr(pyobj obj, char* attr, pyobj val)
 
 pyobj error_pyobj(char* string) {
   printf(string);
+              assert(false);
   exit(-1);
 }

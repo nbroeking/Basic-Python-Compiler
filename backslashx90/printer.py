@@ -36,9 +36,18 @@ class printer:
             self.emit('%s:' % v)
             self.emit('.asciz \"%s\"' % k)
 
+        self.emit('''
+_default_init_: /* :: closure */
+    .word 0
+    .word 0
+''')
+
         self.emit( '.text' );
 
         self.emit( '''
+_default_init_fn_:
+    ret
+
 set_subscript2:
     /* cuz i got tired of lookin at it! */
     movl 8(%esp), %eax
@@ -86,6 +95,8 @@ get_subscript2:
         self.emit( 'main:' );
         self.emit( '    pushl %ebp' )
         self.emit( '    movl %esp, %ebp' )
+        self.emit( '    movl $_default_init_, %eax' )
+        self.emit( '    movl $_default_init_fn_, (%eax)' )
         self.emit( '    pushl $' + str(nfreevars*4) )
         self.emit( '    call create_list' )
         self.emit( '    orl  $3, %eax' )
