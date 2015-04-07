@@ -148,6 +148,9 @@ def get_free_vars(pyast):
             else:
                 return (set(),set())
 
+        elif isinstance(pyast, ast.Class):
+            return (set([pyast.getChildren()[0]]), set())
+
         elif isinstance(pyast, FnName):
             return (set([pyast.name]), set())
     

@@ -422,8 +422,16 @@ class Stage2:
 
                     #If It is a bound method
                     if_bound = [Comment("If is a bound function")]
-                    receiver_var = AsmVar(self.tmpvar())
-                    if_bound.append(Movl(AsmVar(closure_project, 0, 12), receiver_var))
+                    receiver_var = var_caller_saved(self.tmpvar())
+
+                    # get the receiver
+                    if_bound += self.save_registers_arr(16)
+                    if_bound.append(Movl(closure_var, var_raw_mem("(%esp)")))
+                    if_bound.append(Call("get_receiver"))
+                    if_bound.append(Orl(var_const("3"), var_raw("%eax")))
+                    if_bound.append(Movl(var_raw("%eax"), receiver_var))
+                    if_bound += self.restore_registers_arr(16)
+
                     if_bound += self.save_registers_arr(n_bytes + 4)
                     if_bound.append(Movl(receiver_var, var_raw_mem("(%esp)")))
                     idx = 4

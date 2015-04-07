@@ -21,6 +21,8 @@ def is_base(pyst):
 #Convert Base Class to Value
 def base_cov(pyst):
     if isinstance(pyst, pyast.Const):
+        if(pyst.getChildren()[0] == None):
+            return core.Const(0);
         return core.Const(pyst.getChildren()[0] << 2);
     if isinstance(pyst, pyast.Name):
         return core.Name(pyst.getChildren()[0])
