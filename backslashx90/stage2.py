@@ -75,6 +75,8 @@ class Stage2:
         raise WTFException()
 
     def addAsm(self, x):
+        if isinstance(x, list):
+            raise Exception()
         self.AsmTree.append(x)
 
     def save_registers_arr( self, amt=12 ):
@@ -472,6 +474,31 @@ class Stage2:
                 self.addAsm(Call("set_attr"))
                 self.restore_registers(24)
                 
+
+            elif isinstance(ast, core.While):
+                cond = ast.cond
+                cond_var = ast.cond_var
+                thens = ast.stmts
+
+                old_asm = self.AsmTree
+
+                self.AsmTree = []
+                self.instructionSelection(cond, defs, fname, False)
+                new_cond = self.AsmTree
+
+                tmpv = var_spill(self.tmpvar())
+                new_cond.append(Movl(self.to_base_asm(cond_var), tmpv))
+                new_cond.append(Testl(tmpv, tmpv))
+
+                self.AsmTree = []
+                self.instructionSelection(thens, defs, fname, False)
+                new_thens = self.AsmTree
+
+                self.AsmTree = old_asm
+
+                while_ret = While(new_cond, new_thens)
+                self.addAsm( while_ret )
+
             elif isinstance(ast, core.If):
                 cond = ast.cond
                 thens = ast.then_stmts

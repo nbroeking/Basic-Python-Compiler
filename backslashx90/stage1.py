@@ -145,6 +145,27 @@ class Stage1:
 
         self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes), else_nodes))
         return None
+
+    #Losse flatten a while
+    def loose_flatten_while(self, pyst):
+        cond = pyst.getChildren()[0]
+        stmts = pyst.getChildren()[1]
+
+        old_buffer = self.buffer
+        self.buffer = []
+        cond_var = self.flatten_to_var(cond)
+        cond_flat = self.buffer
+        self.buffer = old_buffer
+
+        real_cond = self.tmpvar()
+        cond_flat.append(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond_var])))
+
+
+        stmts_flat = flatten(stmts)
+
+        self.addAsm(core.While(cond_flat, cond_var, stmts_flat))
+        return None
+        
         
     #flatten an if expression
     def loose_flatten_ifexpr(self, pyst):
@@ -241,6 +262,9 @@ class Stage1:
 
         if isinstance(pyst, pyast.Dict):
             return self.loose_flatten_dict(pyst)
+
+        if isinstance(pyst, pyast.While):
+            return self.loose_flatten_while(pyst)
 
         if isinstance(pyst, pyast.If):
             return self.loose_flatten_if(pyst)
@@ -454,6 +478,9 @@ class Stage1:
         elif isinstance(pyst, pyast.Compare):
             self.loose_flatten(pyst)
 
+        elif isinstance(pyst, pyast.While):
+            self.loose_flatten(pyst)
+        
         elif is_base(pyst):
             return base_cov(pyst)
 

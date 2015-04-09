@@ -54,6 +54,7 @@ class Equals(CoreNode):
     def _to_str(self):
         return "%s == %s" % (self.lhs, self.rhs)
 
+    
 class Compare(CoreNode):
     def __init__(self, lhs, rhs):
         self.lhs = lhs
@@ -104,6 +105,15 @@ class If(CoreNode):
 
     def _to_str(self):
         return "if (%s) {\n%s\n} else {\n%s\n}" % (self.cond, "\n".join(map(str,self.then_stmts)), "\n".join(map(str,self.else_stmts)))
+
+class While(CoreNode):
+    def __init__(self, cond, cond_var, stmts):
+        self.cond = cond
+        self.stmts = stmts
+        self.cond_var = cond_var
+
+    def _to_str(self):
+        return "while (%s) {\n%s\n}" % (self.cond, "\n".join(map(str,self.stmts)))
 
 class Or(CoreNode):
     def __init__(self, lhs, rhs):

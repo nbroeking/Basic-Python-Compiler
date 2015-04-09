@@ -323,6 +323,12 @@ def loose_preprocess_functions(pyast,a_name):
 
         return (ast.If([(new_cond, new_then)], new_else), funcs + thenfuncs + elsefuncs)
     
+    elif isinstance(pyast, ast.While):
+        (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0], a_name)
+        (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1], a_name)
+
+        return (ast.While(new_cond, new_then, None), funcs + thenfuncs)
+    
     elif isinstance(pyast, ast.IfExp):
         (new_cond, funcs) = loose_preprocess_functions(pyast.getChildren()[0],a_name)
         (new_then, thenfuncs) = loose_preprocess_functions(pyast.getChildren()[1],a_name)

@@ -21,11 +21,11 @@ def allocate_registers(asm_tree ):
     sets_asm = list(alloc.liveness_analysis( asm_tree[:] ))
     sets_asm.reverse()
 
-    # print "------------- Liveness"
-    # for x in sets_asm:
-    #     print "%-40s %s" % x
+    print "------------- Liveness"
+    for x in sets_asm:
+        print "%-40s %s" % x
 
-    # print "-------------"
+    print "-------------"
 
     (_, sets) = zip( *sets_asm ) if len(sets_asm) > 0 else ([],[])
    
@@ -96,6 +96,11 @@ class Allocation:
         for instr in asm_tree:
             if isinstance(instr, If):
                 for i in self.flatten_ifs(instr.else_stmts):
+                    buf.append(i)
+                for i in self.flatten_ifs(instr.then_stmts):
+                    buf.append(i)
+            elif isinstance(instr, While):
+                for i in self.flatten_ifs(instr.cond):
                     buf.append(i)
                 for i in self.flatten_ifs(instr.then_stmts):
                     buf.append(i)
@@ -254,6 +259,16 @@ class Allocation:
                 new_instr.else_stmts = else_asm or instr.else_stmts
 
                 ret_list.append(new_instr)
+
+            elif isinstance(instr, While):
+                cond_asm = self.pass_spill(instr.cond, colors)
+                then_asm = self.pass_spill(instr.then_stmts, colors)
+
+                if then_asm or cond_asm:
+                    did_spill = True
+                
+                new_instr = While(cond_asm or instr.cond, then_asm or instr.then_stmts)
+                ret_list.append(new_instr)
     
             else:
                 ret_list.append(instr)
@@ -391,6 +406,7 @@ class Allocation:
         return not name.isRaw() and not name.isConstant()
 
     #Create a list of live variables after each instuction
+    #lbefore(stmts, lafter)
     def liveness_analysis( self, asm_tree, current_set = set() ):
         reverse_asm_tree = asm_tree[:]
         reverse_asm_tree.reverse()
@@ -445,6 +461,7 @@ class Allocation:
                 lst1 = list(self.liveness_analysis(then_stmts, current_set.copy()))
                 lst2 = list(self.liveness_analysis(else_stmts, current_set.copy()))
 
+                # lst1[-1][1] ==== lbefore(then_stmts, current_set)
                 set1 = lst1[-1][1]
                 set2 = lst2[-1][1]
                 current_set |= set1 | set2
@@ -456,5 +473,63 @@ class Allocation:
                 
                 
     
-            if not isinstance( instr, If ):
+            elif isinstance( instr, While ):
+                # currest_set = L-after
+                
+                # l4 = l-after
+                # l1 = l4 u l2 u L(cond)
+                # l0 = l1
+                # l3 = l1
+                # l2 = Lbefore(thens, L3)
+
+                
+                l4 = set()
+                l3 = set()
+                l2 = set()
+                l1 = set()
+                l0 = set()
+
+                live_conds = list(self.liveness_analysis(instr.cond, set()))
+                L = live_conds[-1][1]
+
+                def lbefore(instrs, live):
+                    return list(self.liveness_analysis(instrs, live))[-1][1]
+
+                while True:
+                    new_l4 = current_set
+                    if l4 != new_l4:
+                        l4 = new_l4
+                        continue
+
+                    new_l1 = l4 | l2 | L
+                    if l1 != new_l1:
+                        l1 = new_l1
+                        continue
+
+                    new_l0 = l1
+                    if l0 != new_l0:
+                        l0 = new_l0
+                        continue
+
+                    new_l3 = l1
+                    if l3 != new_l3:
+                        l3 = new_l3
+                        continue
+
+                    new_l2 = lbefore(instr.then_stmts, l3)
+                    if l2 != new_l2:
+                        l2 = new_l2
+                        continue
+
+                    break
+
+                for i in self.liveness_analysis(instr.then_stmts, l3):
+                    yield i
+                for i in self.liveness_analysis(instr.cond, l1):
+                    yield i
+
+                current_set = l0
+
+            if not isinstance( instr, (If, While) ):
                 yield (instr, current_set.copy())
+

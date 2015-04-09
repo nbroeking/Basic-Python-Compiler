@@ -21,6 +21,31 @@ GREATER_THAN_EQ = Condition("jge", "greater eq")
 LESS_THAN_EQ = Condition("lte", "less eq")
 
 if_count = 0
+while_count = 0
+class While:
+    def __init__(self, cond, then_stmts):
+        global while_count 
+
+        self.cond = [
+            Comment("Start while loop"),
+            Label(".Lstart_while%d" % while_count),
+            Comment("While loop condition")] + cond + [Jmp(".Lend_while%d" % while_count, "jz")] # :: Condition
+        self.then_stmts = then_stmts + [Jmp(".Lstart_while%d" % while_count)] + [Comment("End While"), Label(".Lend_while%d" % while_count)]
+
+        while_count += 1
+
+    def map_vars(self, f):
+        for i in self.cond:
+            i.map_vars(f)
+        for i in self.then_stmts:
+            i.map_vars(f)
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+    def _to_str(self):
+        return "while (%s) { \n   %s \n} " % ("\n    ".join(map(str,self.cond)), "\n   ".join( map(str, self.then_stmts) ))
+
+
 class If:
     def __init__(self, cond, then_stmts, else_stmts):
         global if_count 
