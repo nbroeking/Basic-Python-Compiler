@@ -5,3 +5,6 @@ if True:
 
     x = yolo()
     x.printer();
+
+else:
+    print 7

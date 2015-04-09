@@ -9,9 +9,10 @@ def declassify(ast):
 class declassifier:
     def __init__(self):
         pass
-    def declassify(self,a_ast):
+    def declassify_p(self,a_ast,current_class):
         nodes = a_ast.getChildren()
         print "NODES", str(nodes)
+        self.mark_nodes(current_class, a_ast)
         retnodes = []
         for stmt in nodes:
             print "STMT",stmt
@@ -20,25 +21,78 @@ class declassifier:
 
                 clazz = stmt
                 class_stmts = clazz.getChildNodes()[-1]
+
                 class_name = clazz.getChildren()[0]
+
+                #
+                pass_down = ast.Name(class_name) if current_class == None else GetAttr(current_class, class_name)
+                print "PASS_DOWN: ", pass_down
+                #
+                class_stmts = self.declassify_p(class_stmts, pass_down)
+
 
                 print "RIGHT HERE TAG + SHIT " + str(clazz.getChildNodes())
                 bases = clazz.getChildNodes()[0:-1]
 
                 retnodes.append(ast.Assign([ast.AssName("$class_bases_", 'OP_ASSIGN')], ast.List(bases)))
                 retnodes.append(ast.Assign([ast.AssName(class_name, 'OP_ASSIGN')], MkClass(ast.Name("$class_bases_"))));
-                retnodes.append(SetAttr(ast.Name(class_name), "__init__", fn.FnName("_default_init_fn_")))
-                for i in class_stmts:
-                    if isinstance(i, ast.Assign):
-                        """ Assign to the class name instead """
-                        (assname, rhs) = i.getChildNodes()
-                        name = assname.getChildren()[0]
-                        retnodes.append(SetAttr(ast.Name(class_name), name, rhs))
-                    else:
-                        retnodes.append(i)
+                retnodes.append(SetAttr(pass_down, "__init__", fn.FnName("_default_init_fn_")))
+
+                # replace all ast.Names with IfExpr(HasAttr(clazz, Name), GetAttr(clazz, Name), Name)
+                
+                def transform_assign(stmts): # -> [stmts]
+                    retlist = []
+
+                    for i in stmts:
+                        if isinstance(i, ast.Assign) and i.getChildren()[0] != "$class_bases_":
+                            """ Assign to the class name instead """
+                            (assname, rhs) = i.getChildNodes()
+                            name = assname.getChildren()[0]
+                            retlist.append(SetAttr(pass_down, name, rhs))
+
+                        elif isinstance(i, ast.If):
+                            (cond, thens, elses) = i.getChildren()
+                            thens_p = transform_assign(thens)
+                            elses_p = transform_assign(elses) if elses else None
+                            retnodes.append(ast.If([(cond,ast.Stmt(thens_p))], ast.Stmt(elses_p)))
+
+                        elif isinstance(i, ast.While):
+                            print "THIS IS A WHILE STATEMENT SON"
+                            (cond, thens, _) = i.getChildren()
+                            stmts_p = transform_assign(thens)
+                            retnodes.append(ast.While(cond, ast.Stmt(stmts_p), None))
+                
+                        else:
+                            retlist.append(i)
+
+                    return retlist
+
+                for i in transform_assign(class_stmts):
+                    retnodes.append(i)
+
+            elif isinstance(stmt, ast.If):
+                (cond, thens, elses) = stmt.getChildren()
+                thens_p = self.declassify_p(thens, current_class)
+                elses_p = self.declassify_p(elses, current_class) if elses else None
+                retnodes.append(ast.If([(cond,ast.Stmt(thens_p))], ast.Stmt(elses_p)))
+
+            elif isinstance(stmt, ast.While):
+                print "THIS IS A WHILE STATEMENT SON"
+                (cond, stmts, _) = stmt.getChildren()
+                stmts_p = self.declassify_p(stmts, current_class)
+                retnodes.append(ast.While(cond, ast.Stmt(stmts_p), None))
+                
             else:
                 retnodes.append(stmt)
-        return ast.Stmt(retnodes);
+        return retnodes;
+    
+    def mark_nodes(self, clazz_name, a_ast):
+        for i in a_ast.getChildNodes():
+            if isinstance(i, ast.Name):
+                i.clazz_name = clazz_name # mark a name as being a part of a class
+
+    def declassify(self, a_ast):
+        return ast.Stmt(self.declassify_p(a_ast, None))
 
 class UnboundMethod:
     def __init__(self, name):
@@ -76,7 +130,7 @@ class SetAttr:
         return self._to_str()
 
     def __str__(self):
-        return "SetAttr(%s, %s)" % (self.lhs, self.attr)
+        return "SetAttr(%s, %s, %s)" % (self.lhs, self.attr, self.rhs)
 
 
 class GetAttr:
@@ -98,6 +152,9 @@ class GetAttr:
 
     def __str__(self):
         return "GetAttr(%s, %s)" % (self.lhs, self.attr)
+
+class HasAttr:
+    pass
         
 class MkClass:
     def __init__(self, bases):

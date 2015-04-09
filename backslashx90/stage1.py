@@ -332,6 +332,13 @@ class Stage1:
             self.buffer.append(core.Assign(tmp, core.GetAttr(lhs, pyst.attr)))
             return tmp
 
+        if isinstance(pyst, dec.MkClass):
+            clazz = pyst
+            tmp = self.tmpvar()
+            self.buffer += [core.Assign(tmp, core.AllocClass(clazz.bases.getChildren()[0]))]
+            return tmp
+
+
         else:
             raise Exception('Unexpected in loose flatten ' + pyst.__class__.__name__ + ' ' + str(pyst))
 
@@ -402,12 +409,6 @@ class Stage1:
                 self.buffer += [core.SetAttr(lhs_flat, name, rhs_flat)]
                 return None
                 
-
-            elif isinstance(pyst.getChildren()[1], dec.MkClass):
-                clazz = pyst.getChildren()[1]
-                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], core.AllocClass(clazz.bases.getChildren()[0]))]
-                return None
-
             else:
                 # if instance of assign, flatten the rhs
                 var = self.loose_flatten(pyst.getChildren()[1])

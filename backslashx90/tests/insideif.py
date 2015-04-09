@@ -9,4 +9,7 @@ if True:
     x = hello()
     x.printer()
 
+else:
+    print 7
+
 
