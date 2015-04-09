@@ -163,7 +163,7 @@ class Stage1:
 
         stmts_flat = flatten(stmts)
 
-        self.addAsm(core.While(cond_flat, cond_var, stmts_flat))
+        self.addAsm(core.While(cond_flat, real_cond, stmts_flat))
         return None
         
         

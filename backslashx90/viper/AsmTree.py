@@ -25,7 +25,7 @@ while_count = 0
 class While:
     def __init__(self, cond, then_stmts):
         global while_count 
-
+        
         self.cond = [
             Comment("Start while loop"),
             Label(".Lstart_while%d" % while_count),

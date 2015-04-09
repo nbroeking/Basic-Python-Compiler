@@ -267,7 +267,11 @@ class Allocation:
                 if then_asm or cond_asm:
                     did_spill = True
                 
-                new_instr = While(cond_asm or instr.cond, then_asm or instr.then_stmts)
+                # new_instr = While(cond_asm or instr.cond, then_asm or instr.then_stmts)
+                new_instr = While([],[])
+                new_instr.cond = cond_asm or instr.cond
+                new_instr.then_stmts = then_asm or instr.then_stmts
+
                 ret_list.append(new_instr)
     
             else:

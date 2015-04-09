@@ -487,7 +487,8 @@ class Stage2:
                 new_cond = self.AsmTree
 
                 tmpv = var_spill(self.tmpvar())
-                new_cond.append(Movl(self.to_base_asm(cond_var), tmpv))
+                new_cond.append(Comment("real_cond: " + str(cond_var)))
+                new_cond.append(Movl(AsmVar(cond_var), tmpv))
                 new_cond.append(Testl(tmpv, tmpv))
 
                 self.AsmTree = []
