@@ -12,3 +12,5 @@ package
 test
 *.in
 *.s
+.vimsource
+secret_tests
