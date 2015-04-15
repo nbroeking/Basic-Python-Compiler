@@ -18,7 +18,7 @@
 \pagestyle{plain}
 
 \title{Implicit Parallelism at Runtime in Compiled Python Programs\\
-    (Proposal)}
+    (Update)}
 \author{Nicolas Broeking \and Joshua Rahm}
 
 \begin{filecontents}{bib.bib}
@@ -77,21 +77,20 @@ Joshua Rahm. We are graduate students at the University of Colorado
 Boulder with interests in Systems Development and Telecommunications.
 
 \section{Problem} In software engineering, parallelism is still a very under
-used featu
-implement parallelism explicitly, such as C/C++ and Java, others, such as
-Python and Ruby, must simply rely on the operating system's multiprocessing
-facilities to manage multiple instances of the program and use the IPC
-mechanisms of the operating system to share data.  Each of these approaches
-have their benefits and their pitfalls.
+used feature. Many programming languauges require the programmer to implement
+parallelism explicitly, such as C/C++ and Java, others, such as Python and
+Ruby, must simply rely on the operating system's multiprocessing facilities to
+manage multiple instances of the program and use the IPC mechanisms of the
+operating system to share data.  Each of these approaches have their benefits
+and their pitfalls.
 
 In the latter case, it is well known that a context switch between two
-different processes is \emph{much} slower than threads, not to mention
-that passing data with messages via the operating system's IPC
-interfaces in much slower than shared heap space. Yet still,
-multiprocessing requires significant boiler plate programming to
-implement. However, in spite of these shortcomings, it is easy to
-implement this system once the boiler is in place, as synchronization is
-not an issue.
+different processes is \emph{much} slower than threads, not to mention that
+passing data with messages via the operating system's IPC interfaces in much
+slower than shared heap space. Yet still, multiprocessing requires significant
+boiler plate programming to implement. However, in spite of these shortcomings,
+it is easy to implement this system once the boiler is in place, as
+synchronization is not an issue.
 
 In the former case, explicit threading, the problems are the inverse.
 Manual threading is fast and efficient, but require due diligence to 
@@ -126,24 +125,15 @@ Another colloquial example is the following:
 \inputcode{Parallel List Comprehension}{example_2.py}
 
 In this example if $f$ and $b$ are pure functions, meaning they do not have any
-side effects, then we are able to parallelize this code for both aspects of this
-list comprehension.
+side effects, then we are able to parallelize this code for both aspects of
+this list comprehension. Our goal is to detect that $f$ $b$ can be run
+independently, imlicitly parallelize it while maintaining the semantics of the
+programs.
 
-Similar purity analysis may be done on loops to determine if they are able to
-be parallelized as well.
-
-Finally, the most ambitious of the goals: being able to parallelize operations on
-separate blocks of memory.
-
-
-\inputcode{Partition Address Space}{example_3.py}
-In this example, the parallelization properties are much more subtle; however, the
-keen eye can see that the elements of $x$ and $y$ are changed independently of one
-and other. This means we can rearrange this program to 
-
-\inputcode{Partition Address Space 2}{example_4.py}
-
-And we can then parallelize this as we did the first example.
+If we are able to detect pure functions and parallelize the code regardless of
+performance we will consider the project to be a success. However as apart of
+our reasearch we will determine the performance gain of our system and try to
+discover possible ways to increase it.
 
 \section{Approach}
 
@@ -153,41 +143,45 @@ work with a subset of the Python Programming Language, $p_3$, that will allow us
 implement our improvements under the assumption that the user has not
 overridden certain operators and types.
 
-With these fairly limited changes to the Python language, we are still left with
-the challenge of parallelizing a program which we have limited knowledge of at compile time.
-Since this is the case, we will need to, at compile time, add many clues to indicate what
-may be optimized and what may not be able to. This will add several phases to our compiler.
+With these fairly limited changes to the Python language, we are still left
+with the challenge of parallelizing a program which we have limited knowledge
+of at compile time.  Since this is the case, we will need to, at compile time,
+add many clues to indicate what may be optimized and what may not be able to.
+This will add several phases to our compiler.
 
-In order to accomplish our tasks we will extend the course compiler with two new phases, Purity Analysis and Interference Detection. 
+In order to accomplish our tasks we will extend the course compiler with two
+new phases, Purity Analysis and Interference Detection. 
 
 \subsection*{$\vert$ Purity Analysis}
 
-We may no longer assume that all functions will modify the global state of the program,
-and discovering purity when it exists is going to be the main distinction between parallelizeable
-code and sequential code. A handful of languages, most notably Haskell, have implemented
-purity checking with their type checker. C++ has also to an extent with the $const$ keyword.
+We may no longer assume that all functions will modify the global state of the
+program, and discovering purity when it exists is going to be the main
+distinction between parallelizeable code and sequential code. A handful of
+languages, most notably Haskell, have implemented purity checking with their
+type checker. C++ has also to an extent with the $const$ keyword.
 
-Detecting purity will be fairly straight forward. The function $f$ is considered pure if
-it never invokes any impure functions. A non pure function is a function that modifies
-the any variable that exists outside the scope of a function. So, for example, in this code
-sample
+Detecting purity will be fairly straight forward. The function $f$ is
+considered pure if it never invokes any impure functions. A non pure function
+is a function that modifies the any variable that exists outside the scope of a
+function. So, for example, in this code sample
 
 
 \inputcode{Purity}{example_5.py}
 
-The function $pure$ is in fact pure while the function $impure$ is impure. Even though,
-both functions call $append$, a mutator function, $pure$ does it to a variable which
-was created in its own scope.
+The function $pure$ is in fact pure while the function $impure$ is impure. Even
+though, both functions call $append$, a mutator function, $pure$ does it to a
+variable which was created in its own scope.
 
-The question now becomes, what if the $append$ function modifies some global state of the
-program? It is already considered to be an impure function since it mutates $self$. This
-is why, there needs to be some further analysis on member functions to determine if they are
-globally pure (meaning they only mutate $self$) or if they are globally impure (they make
-modifications outside of the scope).
+The question now becomes, what if the $append$ function modifies some global
+state of the program? It is already considered to be an impure function since
+it mutates $self$. This is why, there needs to be some further analysis on
+member functions to determine if they are globally pure (meaning they only
+mutate $self$) or if they are globally impure (they make modifications outside
+of the scope).
 
-This is going to require metadata at runtime to discover the levels at which aspects may
-be parallelized. This data may be stored in a tag of the function object in the runtime to
-indicate the level of purity of a function.
+This is going to require metadata at runtime to discover the levels at which
+aspects may be parallelized. This data may be stored in a tag of the function
+object in the runtime to indicate the level of purity of a function.
 
 This means a function such as the following
 
@@ -199,40 +193,41 @@ may be compiled to an intermediate language like
 
 \subsection*{$\vert$ Interference Detection}
 
-To implement the second example where parallelism is achieved by looking at blocks of code
-that do not interfere, we will solve a similar problem as register allocation. First
-we will need to discover which parts of the code are separate from what other parts of the code.
+We must find all nodes where a variable is being assigned to a pure expression
+and spawn a thread at the begining of the program which calculates that value
+and join that thread before the variable is assingned. To do this, we will add
+a phase to our compiler that strips out those expressions and creates threads to
+compute them at the beginning of the function call and join those threads as the value
+are needed.
 
-Once again we will have a notion of purity. And we will know that all impure code will need
-to be executed in their relative orders.
-
-Because of the above, code section analysis must be done in three steps. First is separating pure
-code from impure code. Second is detecting dependency relationships among the blocks of code.
-Then, using this information, we can build an interference graph that show us what must be computed
-sequentially, and what may be computed in parallel. Then, with our graph, we can trace the
-execution of threads to optimally choose the number of threads to execute.
-
-Separating pure and impure functions may be computed statement by statement and then each may be
-globed together by their type. Once we have the impure and the pure code separated, we can detect
-which blocks of code are dependent on others. All impure code block have an implicit temporal
-dependency. Finally, code segments that do not interfere with each other may be parallelized.
+This will also require pure functions to be implemented such that all arguments are
+passed as a copy so that mutations to that variable in other threads are not seen
+by the current thread.
 
 \section{Literature Survey}
 
-Our approach will add the ability, at runtime, detect what aspects of the code may be able to be parallelized In a dynamically typed language. The sources we have found have provided insights on how to implicitly parallelize a traditional, statically typed language, but we are attempting to extend their work to parallelize a dynamically typed language. The work done by HAL achieved parallelism by using
-Partitioned Global Address Space Languages (PGAS). Another group, from IBM and The University of Illinois, achieved implicit parallelism
-using ordered transactions (IPOT). Both of these frameworks provide many insights into the implementation of implicit parallelization; we
-will use both of these insights in the design of our final compiler.
+Our approach will add the ability, at runtime, detect what aspects of the code
+may be able to be parallelized In a dynamically typed language. The sources we
+have found have provided insights on how to implicitly parallelize a
+traditional, statically typed language, but we are attempting to extend their
+work to parallelize a dynamically typed language. The work done by HAL achieved
+parallelism by using Partitioned Global Address Space Languages (PGAS). Another
+group, from IBM and The University of Illinois, achieved implicit parallelism
+using ordered transactions (IPOT). Both of these frameworks provide many
+insights into the implementation of implicit parallelization; we will use both
+of these insights in the design of our final compiler.
 
 \section{Evaluation}
 
-We will evaluate our success via a couple of metrics. First, we will consider our project successful
-if we are able to successfully compile and be semantically correct while using parallel processing.
+We will evaluate our success via a couple of metrics. First, we will consider
+our project successful if we are able to successfully compile and be
+semantically correct while using parallel processing.
 
-Better performance of the tests relative to the original compiler is not necessarily a requirement for
-success, as we realize that of the tests are too small to gain much from multiple threads. However,
-the project will be a great success if we are able to see significant improvement in the runtime
-of our test suite.
+Better performance of the tests relative to the original compiler is not
+necessarily a requirement for success, as we realize that of the tests are too
+small to gain much from multiple threads. However, the project will be a great
+success if we are able to see significant improvement in the runtime of our
+test suite.
 
 \bibliographystyle{abbrv}
 \bibliography{bib}
