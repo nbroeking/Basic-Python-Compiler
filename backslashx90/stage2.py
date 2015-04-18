@@ -363,7 +363,7 @@ class Stage2:
                     #get tag
                     closure_var = AsmVar(op.lhs.name)
                     type_of_object_var = AsmVar(self.tmpvar())
-                    vname = AsmVar(name)
+                    vname = var_stack(name)
 
                     vreturn = var_caller_saved(self.tmpvar())
                     closure_project = self.tmpvar()
@@ -450,7 +450,6 @@ class Stage2:
                     if_norm = [Comment("If is a normal function")]
                     if_norm += self.save_registers_arr(n_bytes);
 
-                    stack_var = var_stack(self.tmpvar());
 
                     idx = 12
                     for i in args:
@@ -466,7 +465,7 @@ class Stage2:
                     
                     # push on all of our shit
                     # reg_var = var_spill(self.tmpvar())
-                    if_norm.append(Leal(stack_var, var_raw_mem("(%esp)")))
+                    if_norm.append(Leal(vname, var_raw_mem("(%esp)")))
                     # if_norm.append(Movl(reg_var, var_raw_mem("(%esp)")))
                     if_norm.append(Movl(AsmVar(tmpname), var_raw_mem("4(%esp)")))
                     if_norm.append(Andl(var_const("0xFFFFFFFC"), var_raw_mem("4(%esp)")))
@@ -474,9 +473,7 @@ class Stage2:
 
                     if_norm.append(Call("dispatch"))
 
-                    if_norm.append(Movl(stack_var, vreturn))
                     if_norm += self.restore_registers_arr(n_bytes)
-                    if_norm.append(Movl(vreturn, vname))
                     
                     elses.append(If(ZERO, if_bound, if_norm))
                     self.addAsm(If(ZERO, thens, elses))

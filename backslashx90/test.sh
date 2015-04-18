@@ -62,7 +62,7 @@ function run_test {
     else
         echo -n "${nc}"
         python2 compile.py -o /tmp/$$test.s $args $i && \
-            gcc -m32 -o/tmp/$$test /tmp/$$test.s runtime/libruntime.a -lm
+            gcc -m32 -o/tmp/$$test /tmp/$$test.s runtime/libruntime.a -lm -lpthread
         rc=$?
         echo -n "$green|$nc ${cyan}$(printf '%-50s' $i) ["
         if [ $rc -ne 0 ] ; then
