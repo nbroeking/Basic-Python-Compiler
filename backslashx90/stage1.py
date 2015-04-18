@@ -424,8 +424,11 @@ class Stage1:
                 assign_to = pyst.getChildren()[0].getChildren()[0]
                 # if instance of assign, flatten the rhs
                 if isinstance(pyst.getChildren()[1], pyast.CallFunc):
+                    fname = pyst.getChildren()[1].getChildren()[0]
+                    fname = fname.getChildren()[0] if isinstance(fname, pyast.Name) else None
                     self.loose_flatten_func(pyst.getChildren()[1], assign_to);
-                    self.joinable_vars.add(assign_to)
+                    if not (fname == "input" or fname == "print"):
+                        self.joinable_vars.add(assign_to)
 
                 else:
                     var = self.loose_flatten(pyst.getChildren()[1])

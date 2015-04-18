@@ -33,6 +33,7 @@ class Stage2:
         self.labelnum = 0
         self.nametrans = {}
         self.AsmTree = []
+        self.thread_id_dic = {} # var names -> thread_ids
     
     def tmpvar(self):
         ret = "$s2_%d" % self.namenum
@@ -360,6 +361,10 @@ class Stage2:
                     args = op.args
                     n_bytes = 12 + 12 + (len(args) << 2)
 
+                    thread_id = var_caller_saved(self.tmpvar())
+                    self.addAsm(Movl(var_const("0"), thread_id))
+                    self.thread_id_dic[name] = thread_id
+
                     #get tag
                     closure_var = AsmVar(op.lhs.name)
                     type_of_object_var = AsmVar(self.tmpvar())
@@ -472,6 +477,7 @@ class Stage2:
                     if_norm.append(Movl(var_const(str(len(args))), var_raw_mem("8(%esp)")))
 
                     if_norm.append(Call("dispatch"))
+                    if_norm.append(Movl(var_raw("%eax"), thread_id))
 
                     if_norm += self.restore_registers_arr(n_bytes)
                     
@@ -569,6 +575,12 @@ class Stage2:
                     var_raw_mem("12(%esp)"), AsmVar("%edx", RAW)))
                 self.AsmTree.append(Addl(
                     AsmVar("16", CONSTANT), AsmVar("%esp", RAW)))
+
+            elif isinstance(ast, core.Join):
+                self.save_registers(16)
+                self.addAsm(Movl(self.thread_id_dic[ast.name], var_raw_mem("(%esp)")))
+                self.addAsm(Call("join_thread"))
+                self.restore_registers(16)
 
             else:
                 raise Exception("Unexpected %s in assemble" % ast.__class__)
