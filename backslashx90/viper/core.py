@@ -21,6 +21,13 @@ class CoreClass:
     def _to_str(self):
         return "Class %s"% self.name
 
+class Join(CoreNode):
+    def __init__(self, name):
+        self.name = name
+
+    def _to_str(self):
+        return "join(%s)" % self.name
+
 class Comment(CoreNode):
     def __init__(self, comment):
         self.comment = comment

@@ -19,22 +19,32 @@ def is_base(pyst):
     return isinstance(pyst, (pyast.Const, pyast.Name))
 
 #Convert Base Class to Value
-def base_cov(pyst):
-    if isinstance(pyst, pyast.Const):
-        if(pyst.getChildren()[0] == None):
-            return core.Const(0);
-        return core.Const(pyst.getChildren()[0] << 2);
-    if isinstance(pyst, pyast.Name):
-        return core.Name(pyst.getChildren()[0])
+# def base_cov(pyst):
+#     if isinstance(pyst, pyast.Const):
+#         if(pyst.getChildren()[0] == None):
+#             return core.Const(0);
+#         return core.Const(pyst.getChildren()[0] << 2);
+#     if isinstance(pyst, pyast.Name):
+#         return core.Name(pyst.getChildren()[0])
 
 #Flattener Class
 class Stage1:
     tempcount = 0
     def __init__(self, root=True):
         self.buffer = []
+        self.joinable_vars = set()
+
         if root:
             self.addAsm( core.Assign("True", core.Const(0b101)) )
             self.addAsm( core.Assign("False", core.Const(0b001)) )
+
+    def base_cov(self, pyst):
+        if isinstance(pyst, pyast.Const):
+            if(pyst.getChildren()[0] == None):
+                return core.Const(0);
+            return core.Const(pyst.getChildren()[0] << 2);
+        if isinstance(pyst, pyast.Name):
+            return self.mkname(pyst.getChildren()[0])
 
 #Create Temporary name
     def tmpvar(self, fmt="$%d$"):
@@ -53,7 +63,7 @@ class Stage1:
 #Flatten an operation
     def loose_flatten_op(self, pyst):
         lhs, rhs = pyst.asList()
-        lhs_, rhs_ = base_cov(lhs), base_cov(rhs)
+        lhs_, rhs_ = self.base_cov(lhs), self.base_cov(rhs)
 
         if is_base(lhs) and is_base(rhs):
             var = self.tmpvar()
@@ -82,7 +92,7 @@ class Stage1:
             var = self.tmpvar()
         if isinstance(lhs, pyast.Name) and lhs.getChildren()[0] in ["input", "print"]:
             # finally gave in
-            self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
+            self.buffer += [core.Assign(var, core.CallFunc(self.base_cov(lhs), newargs))]
         else:
             # $0$_c = CallFunc("is_class", [lhs_prime])
             # if $0$_c then
@@ -123,7 +133,7 @@ class Stage1:
     
     def try_var(self, varname, orig):
         if varname is None:
-            return base_cov(orig)
+            return self.base_cov(orig)
         else:
             return core.Name(varname)
     def flatten_to_var(self, orig):
@@ -193,8 +203,8 @@ class Stage1:
             val_var = self.loose_flatten(dct_children[i+1])
             key_var = self.loose_flatten(dct_children[i])
 
-            key_arg = core.Name(key_var) if not key_var is None else base_cov(dct_children[i])
-            val_arg = core.Name(val_var) if not val_var is None else base_cov(dct_children[i+1])
+            key_arg = core.Name(key_var) if not key_var is None else self.base_cov(dct_children[i])
+            val_arg = core.Name(val_var) if not val_var is None else self.base_cov(dct_children[i+1])
 
             self.addAsm( 
                 core.Assign(self.tmpvar(), core.CallFunc(core.Name("set_subscript2"), [core.Name(dct_name), key_arg, val_arg])) )
@@ -224,7 +234,7 @@ class Stage1:
     def loose_flatten_subscript(self, pyst):
         children = pyst.getChildren()
         lhs, rhs = (children[0], children[2])
-        lhs_, rhs_ = base_cov(lhs), base_cov(rhs)
+        lhs_, rhs_ = self.base_cov(lhs), self.base_cov(rhs)
 
         if is_base(lhs) and is_base(rhs):
             var = self.tmpvar()
@@ -291,7 +301,7 @@ class Stage1:
             rhs = pyst.getChildren()[0]
             if is_base( rhs ):
                 var = self.tmpvar()
-                self.buffer += [core.Assign(var, core.Not(base_cov(rhs)))];
+                self.buffer += [core.Assign(var, core.Not(self.base_cov(rhs)))];
                 return var
             else:
                 var = self.loose_flatten(rhs);
@@ -303,7 +313,7 @@ class Stage1:
             rhs = pyst.getChildren()[0]
             if is_base( rhs ):
                 var = self.tmpvar()
-                self.buffer += [core.Assign(var, core.Neg(base_cov(rhs)))];
+                self.buffer += [core.Assign(var, core.Neg(self.base_cov(rhs)))];
                 return var
             else:
                 var = self.loose_flatten(rhs);
@@ -411,24 +421,34 @@ class Stage1:
                 return None
                 
             else:
+                assign_to = pyst.getChildren()[0].getChildren()[0]
                 # if instance of assign, flatten the rhs
                 if isinstance(pyst.getChildren()[1], pyast.CallFunc):
-                    self.loose_flatten_func(pyst.getChildren()[1], pyst.getChildren()[0].getChildren()[0]);
+                    self.loose_flatten_func(pyst.getChildren()[1], assign_to);
+                    self.joinable_vars.add(assign_to)
+
                 else:
                     var = self.loose_flatten(pyst.getChildren()[1])
     
                     # var = None if no temp var needed, or name of temp var
                     if var is None:
                         # already flat, convert from python ast -> stage1 ast
-                        rhs = base_cov(pyst.getChildren()[1])
+                        rhs = self.base_cov(pyst.getChildren()[1])
                     else:
                         # rhs = name of var e.g. $1$
-                        rhs = core.Name(var)
+                        rhs = self.mkname(var)
         
                     # append to the buffer an assignment
-                    self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
+                    self.buffer += [core.Assign(assign_to, rhs)]
         else:
             raise Exception("Expected an Assign instance")
+
+    def mkname(self, var):
+        if var in self.joinable_vars:
+            self.buffer += [core.Join(var)]
+            self.joinable_vars.remove(var)
+        return core.Name(var)
+
 
 #Flatten Print
     def flatten_print(self, pyst):
@@ -436,9 +456,9 @@ class Stage1:
             var = self.loose_flatten(pyst.getChildren()[0]);
 
             if var is None:
-                rhs = base_cov(pyst.getChildren()[0])
+                rhs = self.base_cov(pyst.getChildren()[0])
             else:
-                rhs = core.Name(var);
+                rhs = self.mkname(var);
 
             self.buffer += [core.Print(rhs)]
 
@@ -487,7 +507,7 @@ class Stage1:
             self.loose_flatten(pyst)
         
         elif is_base(pyst):
-            return base_cov(pyst)
+            return self.base_cov(pyst)
 
         else:
             self.loose_flatten(pyst)
