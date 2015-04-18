@@ -69,7 +69,7 @@ class Stage1:
                 var = self.loose_flatten(rhs)
                 return self.loose_flatten(pyst.__class__((lhs, pyast.Name(var))))
 
-    def loose_flatten_func(self, pyst):
+    def loose_flatten_func(self, pyst, var=None):
         lst = pyst.getChildren();
         lhs = lst[0]
         args = lst[1:-2]
@@ -78,7 +78,8 @@ class Stage1:
         lhs_prime = self.flatten_to_var(lhs)
 
         # args are flat for sure 
-        var = self.tmpvar()
+        if var is None:
+            var = self.tmpvar()
         if isinstance(lhs, pyast.Name) and lhs.getChildren()[0] in ["input", "print"]:
             # finally gave in
             self.buffer += [core.Assign(var, core.CallFunc(base_cov(lhs), newargs))]
@@ -411,18 +412,21 @@ class Stage1:
                 
             else:
                 # if instance of assign, flatten the rhs
-                var = self.loose_flatten(pyst.getChildren()[1])
-    
-                # var = None if no temp var needed, or name of temp var
-                if var is None:
-                    # already flat, convert from python ast -> stage1 ast
-                    rhs = base_cov(pyst.getChildren()[1])
+                if isinstance(pyst.getChildren()[1], pyast.CallFunc):
+                    self.loose_flatten_func(pyst.getChildren()[1], pyst.getChildren()[0].getChildren()[0]);
                 else:
-                    # rhs = name of var e.g. $1$
-                    rhs = core.Name(var)
+                    var = self.loose_flatten(pyst.getChildren()[1])
     
-                # append to the buffer an assignment
-                self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
+                    # var = None if no temp var needed, or name of temp var
+                    if var is None:
+                        # already flat, convert from python ast -> stage1 ast
+                        rhs = base_cov(pyst.getChildren()[1])
+                    else:
+                        # rhs = name of var e.g. $1$
+                        rhs = core.Name(var)
+        
+                    # append to the buffer an assignment
+                    self.buffer += [core.Assign(pyst.getChildren()[0].getChildren()[0], rhs)]
         else:
             raise Exception("Expected an Assign instance")
 
