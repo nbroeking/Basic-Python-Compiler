@@ -358,7 +358,7 @@ class Stage2:
 
                 elif isinstance(op, core.CallClosure):
                     args = op.args
-                    n_bytes = 16 + (len(args) << 2)
+                    n_bytes = 12 + 12 + (len(args) << 2)
 
                     #get tag
                     closure_var = AsmVar(op.lhs.name)
@@ -440,20 +440,41 @@ class Stage2:
                     if_bound.append(Movl(vreturn, vname))
                     
 
+                    # x = f(5, 2)
+                    # ----
+                    # stack_var;
+                    # dispach(&stack_var, f, 2, 5, 2)
+                    # movl stack_var, x
+
                     # else
                     if_norm = [Comment("If is a normal function")]
                     if_norm += self.save_registers_arr(n_bytes);
-                    idx = 0
+
+                    stack_var = var_stack(self.tmpvar());
+
+                    idx = 12
                     for i in args:
-                        if_norm.append( Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)) )
+                        if_norm.append(Movl(self.to_base_asm(i), var_raw_mem("0x%x(%%esp)" % idx)))
                         idx += 4
 
-                    tmpname = self.tmpvar() # environment?
-                    if_norm.append( Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
-                    if_norm.append( Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)) )
-                    if_norm.append( Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)) )
-                    if_norm.append(CallStar(AsmVar(tmpname, 0, 4)))
-                    if_norm.append(Movl(var_raw("%eax"), vreturn))
+                    # start closure stuff
+                    tmpname = self.tmpvar()
+                    if_norm.append(Movl(AsmVar(op.lhs.name), AsmVar(tmpname)) )
+                    if_norm.append(Andl(var_const("0xFFFFFFFC"), AsmVar(tmpname)))
+                    # if_norm.append(Movl(AsmVar(tmpname, 0, 8), var_raw_mem("0x%x(%%esp)" % idx)))
+                    # end closure stuff
+                    
+                    # push on all of our shit
+                    # reg_var = var_spill(self.tmpvar())
+                    if_norm.append(Leal(stack_var, var_raw_mem("(%esp)")))
+                    # if_norm.append(Movl(reg_var, var_raw_mem("(%esp)")))
+                    if_norm.append(Movl(AsmVar(tmpname), var_raw_mem("4(%esp)")))
+                    if_norm.append(Andl(var_const("0xFFFFFFFC"), var_raw_mem("4(%esp)")))
+                    if_norm.append(Movl(var_const(str(len(args))), var_raw_mem("8(%esp)")))
+
+                    if_norm.append(Call("dispatch"))
+
+                    if_norm.append(Movl(stack_var, vreturn))
                     if_norm += self.restore_registers_arr(n_bytes)
                     if_norm.append(Movl(vreturn, vname))
                     

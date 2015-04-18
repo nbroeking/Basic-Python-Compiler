@@ -8,6 +8,7 @@ CALLER_SAVED = 0b10
 RAW          = 0b100
 CONSTANT     = 0b1000
 MEMORY       = 0b10000
+STACK        = 0b110000
 
 def var_const( name ):
     return AsmVar( name, CONSTANT )
@@ -26,6 +27,9 @@ def var_caller_saved( name ):
 
 def var_spill( name ):
     return AsmVar( name, SPILL )
+
+def var_stack(name):
+    return AsmVar(name, STACK)
 
 def var( name ):
     return AsmVar(name)
@@ -82,6 +86,9 @@ class AsmVar:
 
     def isMemory(self):
         return self.mask & MEMORY
+
+    def isStack(self):
+        return self.mask & STACK
 
     def isConstant(self):
         return self.mask & CONSTANT

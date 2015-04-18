@@ -86,6 +86,24 @@ class Movl:
     def _to_str(self):
         return "movl %s, %s" % (self.lhs, self.rhs)
 
+class Leal:
+    def __init__(self, src, dest):
+        if not isinstance(src, AsmVar) or not isinstance(dest, AsmVar):
+            raise Exception()
+
+        self.lhs = src
+        self.rhs = dest
+
+    def __str__(self): return self._to_str()
+    def __repr__(self): return self._to_str()
+
+    def map_vars(self, f): # apply function to all vars
+        self.lhs = f(self.lhs)
+        self.rhs = f(self.rhs)
+
+    def _to_str(self):
+        return "leal %s, %s" % (self.lhs, self.rhs)
+
 class Cmovzl:
     def __init__(self, src, dest):
         if not isinstance(src, AsmVar) or not isinstance(dest, AsmVar):

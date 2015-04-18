@@ -190,32 +190,45 @@ class Allocation:
                isinstance(instr, Xorl) or isinstance(instr, Shll) or \
                isinstance(instr, Shrl) or isinstance(instr, Cmovzl) or \
                isinstance(instr, Cmpl) or isinstance(instr, Testl) or \
-               isinstance(instr, Andl) or isinstance(instr, Orl):
+               isinstance(instr, Andl) or isinstance(instr, Orl) or \
+               isinstance(instr, Leal):
 
                 s, d = instr.lhs, instr.rhs; # asm vars
 
-                if s.is_deref() and self.is_memory(AsmVar(s.name), colors):
-                        t_name = "%d" % self.current_temp
-                        t_var = AsmVar(t_name, SPILL)
-                        t_deref = AsmVar(t_name, SPILL, s.dref_off)
-                        self.current_temp += 1
-                        ret_list.append( Comment("Spilling source Deref %s" % instr) )
-                        ret_list.append( Movl(AsmVar(s.name), t_var) )
-                        ret_list.append( inst_class(t_deref, d) )
-                        ret_list.append( Comment(" end Deref") )
-                        did_spill = True
+                if isinstance(instr, Leal) and self.is_memory(d, colors):
+                    t_name = "%d" % self.current_temp
+                    t_var = AsmVar(t_name, SPILL)
+                    self.current_temp += 1
+
+                    ret_list.append( Comment("Spilling Leal %s" % instr) )
+                    ret_list.append( Leal(s, t_var) )
+                    ret_list.append( Movl(t_var, d) )
+                    ret_list.append( Comment(" end Leal") )
+                    did_spill = True
+                    
+
+                elif s.is_deref() and self.is_memory(AsmVar(s.name), colors):
+                    t_name = "%d" % self.current_temp
+                    t_var = AsmVar(t_name, SPILL)
+                    t_deref = AsmVar(t_name, SPILL, s.dref_off)
+                    self.current_temp += 1
+                    ret_list.append( Comment("Spilling source Deref %s" % instr) )
+                    ret_list.append( Movl(AsmVar(s.name), t_var) )
+                    ret_list.append( inst_class(t_deref, d) )
+                    ret_list.append( Comment(" end Deref") )
+                    did_spill = True
 
                 elif d.is_deref() and self.is_memory(AsmVar(d.name), colors):
-                        # double deref
-                        t_name = "%d" % self.current_temp
-                        t_var = AsmVar(t_name, SPILL)
-                        t_deref = AsmVar(t_name, SPILL, d.dref_off)
-                        self.current_temp += 1
-                        ret_list.append( Comment("Spilling destination Deref %s" % instr) )
-                        ret_list.append( Movl(AsmVar(d.name), t_var) )
-                        ret_list.append( inst_class(s, t_deref) )
-                        ret_list.append( Comment(" end Deref") )
-                        did_spill = True
+                    # double deref
+                    t_name = "%d" % self.current_temp
+                    t_var = AsmVar(t_name, SPILL)
+                    t_deref = AsmVar(t_name, SPILL, d.dref_off)
+                    self.current_temp += 1
+                    ret_list.append( Comment("Spilling destination Deref %s" % instr) )
+                    ret_list.append( Movl(AsmVar(d.name), t_var) )
+                    ret_list.append( inst_class(s, t_deref) )
+                    ret_list.append( Comment(" end Deref") )
+                    did_spill = True
 
                 elif self.is_memory(s,colors) and self.is_memory(d,colors):
                     t_slot = AsmVar("%d" % self.current_temp, SPILL )
@@ -303,6 +316,7 @@ class Allocation:
         ret_map = dict()
         for instr, l_after in sets:
             if isinstance(instr, Movl) or \
+               isinstance(instr, Leal) or \
                isinstance(instr, Cmovzl):
     
                 t = instr.rhs
@@ -390,9 +404,21 @@ class Allocation:
                 maxret = max( maxret, ret_map[node] )
     
         for node in mapping:
-            if not node.cantSpill() and not node.isCallerSaved():
+            if not node.cantSpill() and not node.isCallerSaved() and not node.isStack() :
                 neighbors = mapping[node] # set
                 possible = set(range(len(neighbors) + 1)) # possible registers
+        
+                for neighbor in neighbors:
+                    if neighbor in ret_map and ret_map[neighbor] in possible:
+                        possible.remove( ret_map[neighbor] )
+        
+                ret_map[node] = min(possible)
+                maxret = max( maxret, ret_map[node] )
+    
+        for node in mapping:
+            if not node.cantSpill() and not node.isCallerSaved():
+                neighbors = mapping[node] # set
+                possible = set(range(len(neighbors) + 7)) - set([0,1,2,3,4,5]) # possible registers
         
                 for neighbor in neighbors:
                     if neighbor in ret_map and ret_map[neighbor] in possible:
@@ -417,7 +443,8 @@ class Allocation:
     
         # yield (None, set())
         for instr in reverse_asm_tree:
-            if isinstance(instr, Movl):
+            if isinstance(instr, Movl) or \
+               isinstance(instr, Leal):
                 src = instr.lhs
                 dest = instr.rhs
     
