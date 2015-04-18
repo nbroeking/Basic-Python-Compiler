@@ -3,8 +3,11 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "runtime.h"
+
+#include <pthread.h>
 
 #define false 0
 
@@ -16,6 +19,7 @@ static void print_float(double in);
 static void print_list(pyobj pyobj_list);
 static void print_dict(pyobj dict);
 static list list_add(list x, list y);
+
 
 int tag(pyobj val) {
   return val & MASK;
@@ -773,6 +777,7 @@ big_pyobj* create_closure(void* fun_ptr, pyobj free_vars) {
   function f;
   f.function_ptr = fun_ptr;
   f.free_vars = free_vars;
+  f.flags = 0;
   return closure_to_big(f);
 }
 

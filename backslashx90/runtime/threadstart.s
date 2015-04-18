@@ -7,7 +7,10 @@
 /* A routine to be able to start our thread
  * Must be an assembly function since there
  * is no way to push a variable number of
- * args on the stack in c */
+ * args on the stack in ce
+ *
+ * struct thread_args
+ * */
 __thread_start:
     pushl %ebp
     movl %esp, %ebp
@@ -55,10 +58,6 @@ __thread_start:
 
 
     leal 4(%esp,%esi,4), %esp /* restore the stack */
-
-    /* call pthread_exit */
-    movl $0, (%esp)
-    call pthread_exit
 
     popl %edi
     popl %esi

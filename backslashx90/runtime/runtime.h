@@ -42,9 +42,12 @@ typedef struct list_struct list;
 
 typedef struct hashtable* dict;
 
+
+#define IS_PURE 0x01
 struct fun_struct {
   void* function_ptr;
-  pyobj free_vars;
+  pyobj free_vars; /* <- what we malloc */
+  int flags; /* 0 => impure, 1 => pure */
 };
 typedef struct fun_struct function;
 
