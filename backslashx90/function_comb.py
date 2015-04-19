@@ -39,7 +39,7 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children):
+    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children, flags=True):
 
         self.name = name
         self.origname = origname
@@ -48,6 +48,7 @@ class DefinedFunction:
         self.my_closure = my_closure         # the closure of this function
         self.pyast = pyast
         self.children = children # [DefinedFunction]
+        self.flags = flags
 
     def get_ast(self):
         return self.pyast
@@ -64,6 +65,7 @@ class DefinedFunction:
             Comment("%s[%s](%s) { " % (self.origname, ",".join(self.parent_closure.keys()), ",".join(self.args))),
             Raw(".globl %s" % self.name),
             Raw(".type %s,@function" % self.name),
+            Raw(".long %d" % self.flags),
             Label("%s" % self.name),
         ] + preamble + self.pyast + [Label(".%s_ret" % self.name)] + postamble + \
             [Comment("}")]

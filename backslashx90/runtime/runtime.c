@@ -773,11 +773,11 @@ static big_pyobj* closure_to_big(function f) {
   return v;
 }
 
-big_pyobj* create_closure(void* fun_ptr, pyobj free_vars) {
+big_pyobj* create_closure(void* fun_ptr, pyobj free_vars, int flags) {
   function f;
   f.function_ptr = fun_ptr;
   f.free_vars = free_vars;
-  f.flags = 0;
+  f.flags = flags;
   return closure_to_big(f);
 }
 

@@ -125,7 +125,7 @@ big_pyobj* add(big_pyobj* a, big_pyobj* b);
 int equal(big_pyobj* a, big_pyobj* b);
 int not_equal(big_pyobj* x, big_pyobj* y);
 
-big_pyobj* create_closure(void* fun_ptr, pyobj free_vars);
+big_pyobj* create_closure(void* fun_ptr, pyobj free_vars, int flags);
 void* get_fun_ptr(pyobj);
 pyobj get_free_vars(pyobj);
 big_pyobj* set_free_vars(big_pyobj* b, pyobj free_vars);

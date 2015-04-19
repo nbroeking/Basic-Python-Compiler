@@ -104,7 +104,10 @@ class AsmVar:
             return '$' + str(self.name)
         elif self.dref_off is None:
             return self.name
-        return "0x%x(%s)" % (self.dref_off, self.name)
+
+
+        neg = '-' if self.dref_off < 0 else ''
+        return "%s0x%x(%s)" % (neg, abs(self.dref_off), self.name)
 
     def __repr__(self):
         return str(self)

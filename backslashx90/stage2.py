@@ -208,9 +208,13 @@ class Stage2:
                     fn_name = op.name 
                     vname = var_caller_saved(name)
 
+                    tmp_reg = self.tmpvar() 
+
                     self.save_registers(28)
                     self.addAsm( Movl(var_const(fn_name), var_raw_mem("(%esp)")) )
                     self.addAsm( Movl(myclosure, var_raw_mem("4(%esp)")) )
+                    self.addAsm( Movl(var_const(fn_name), AsmVar(tmp_reg)) )
+                    self.addAsm( Movl(AsmVar(tmp_reg, 0, -4), var_raw_mem("8(%esp)") ) )
                     self.addAsm( Call("create_closure") )
                     self.addAsm( Orl(var_const("3"), var_raw("%eax")) )
                     self.addAsm( Movl(var_raw("%eax"), vname) )
