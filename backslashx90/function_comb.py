@@ -39,7 +39,7 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children, flags=True):
+    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children, flags):
 
         self.name = name
         self.origname = origname
@@ -111,6 +111,9 @@ def set_to_map(s):
         md[i] = v
         v += 1
     return md
+
+def is_pure(ast):
+    return False
 #
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
@@ -125,8 +128,9 @@ def to_defined_function(function_p, parent_name, parent_closure):
 
     # the new children
     new_children = [to_defined_function(i,mname,mclosure) for i in children]
+    
 
-    return DefinedFunction(mname, name, args, parent_closure, mclosure, stmts, new_children)
+    return DefinedFunction(mname, name, args, parent_closure, mclosure, stmts, new_children, is_pure(stmts))
 
 def mangle(a_name, name_p):
     x = "x90_" + a_name + "_" + name_p
