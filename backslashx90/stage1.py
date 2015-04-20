@@ -104,7 +104,7 @@ class Stage1:
             # else 
             #     var = CallClosure(lhs_prime)
             self.buffer += [core.Assign(var, core.CallClosure(lhs_prime, newargs))]
-        self.joinable_vars.add(var)
+            self.joinable_vars.add(var)
         return var
 
     #Adds an assemply node to the list of instructions

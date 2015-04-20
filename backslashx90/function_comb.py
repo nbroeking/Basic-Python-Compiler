@@ -53,13 +53,33 @@ class DefinedFunction:
         self.detect_purity()
 
     def detect_purity(self):
+        child_map = dict()
+        for i in self.children:
+            if not (i.origname in child_map):
+                child_map[i.origname] = i
+            if i.flags == 0:
+                child_map[i.origname] = i
+                
 
         def is_pure(pyast):
             if isinstance(pyast, ast.Name):
-                name = pyast.getChildren()[0] 
+                name = pyast.getChildren()[-1] 
                 if not (name in self.args or name in self.local_vars):
                     return False
                 return True
+
+            if isinstance(pyast, ast.Print):
+                return False
+
+            if isinstance(pyast, ast.CallFunc):
+                if isinstance(pyast.getChildren()[0], ast.Name):
+                    name = pyast.getChildren()[0].getChildren()[0]
+                    if name in child_map:
+                        if child_map[name].flags == 0:
+                            return False
+                    else:
+                        return False
+
 
             for i in pyast.getChildNodes():
                 if not is_pure(i):
