@@ -521,16 +521,24 @@ class Stage1:
         else:
             self.loose_flatten(pyst)
 
+        # if self.root:;
+        #     for i in self.joinable_vars:
+        #        self.buffer.append(core.Join(i))
+
+        return self.buffer
+    def outer_flatten(self, ast):
+        self.flatten(ast)
+
         if self.root:
             for i in self.joinable_vars:
-               self.buffer.append(core.Join(i))
+                self.buffer.append(core.Join(i))
 
         return self.buffer
 
 # simply call flatten on a stage1
 def flatten(ast, root=False, joinable=set()):
     sg1 = Stage1(root, joinable)
-    return sg1.flatten(ast)
+    return sg1.outer_flatten(ast)
 
 #print the flatten ast
 def print_core_ast( core ): # core : [AST]
