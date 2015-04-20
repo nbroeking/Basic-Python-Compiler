@@ -30,9 +30,11 @@ def is_base(pyst):
 #Flattener Class
 class Stage1:
     tempcount = 0
-    def __init__(self, root=True):
+    def __init__(self, root=True, joinable=set()):
         self.buffer = []
-        self.joinable_vars = set()
+        self.joinable_vars = joinable.copy()
+
+        self.root = root
 
         if root:
             self.addAsm( core.Assign("True", core.Const(0b101)) )
@@ -102,6 +104,7 @@ class Stage1:
             # else 
             #     var = CallClosure(lhs_prime)
             self.buffer += [core.Assign(var, core.CallClosure(lhs_prime, newargs))]
+        self.joinable_vars.add(var)
         return var
 
     #Adds an assemply node to the list of instructions
@@ -152,9 +155,9 @@ class Stage1:
         if pyst.getChildren()[2] is None:
             else_nodes = []
         else:
-            else_nodes = flatten(pyst.getChildren()[2])
+            else_nodes = flatten(pyst.getChildren()[2], False, self.joinable_vars)
 
-        self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes), else_nodes))
+        self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes, False, self.joinable_vars), else_nodes))
         return None
 
     #Losse flatten a while
@@ -327,6 +330,9 @@ class Stage1:
         if isinstance(pyst, pyast.Return):
             rhs = pyst.getChildren()[0]
             rhs_prime = self.flatten_to_var(rhs)
+
+            for i in self.joinable_vars:
+                self.buffer.append(core.Join(i))
             self.buffer += [core.Return(rhs_prime)]
             return None
 
@@ -515,11 +521,15 @@ class Stage1:
         else:
             self.loose_flatten(pyst)
 
+        if self.root:
+            for i in self.joinable_vars:
+               self.buffer.append(core.Join(i))
+
         return self.buffer
 
 # simply call flatten on a stage1
-def flatten(ast, root=False):
-    sg1 = Stage1(root)
+def flatten(ast, root=False, joinable=set()):
+    sg1 = Stage1(root, joinable)
     return sg1.flatten(ast)
 
 #print the flatten ast

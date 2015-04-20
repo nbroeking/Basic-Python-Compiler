@@ -39,7 +39,7 @@ class DefinedFunction:
     # args : list<string> -- argument list
     # closure : map<string, int> -- map of variable name to their offset
     # pyast : the ast in this function
-    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children, flags):
+    def __init__(self, name, origname, args, parent_closure, my_closure, pyast, children, local_vars):
 
         self.name = name
         self.origname = origname
@@ -48,7 +48,25 @@ class DefinedFunction:
         self.my_closure = my_closure         # the closure of this function
         self.pyast = pyast
         self.children = children # [DefinedFunction]
-        self.flags = flags
+        self.local_vars = local_vars
+        self.flags = 0
+        self.detect_purity()
+
+    def detect_purity(self):
+
+        def is_pure(pyast):
+            if isinstance(pyast, ast.Name):
+                name = pyast.getChildren()[0] 
+                if not (name in self.args or name in self.local_vars):
+                    return False
+                return True
+
+            for i in pyast.getChildNodes():
+                if not is_pure(i):
+                    return False
+            return True
+
+        self.flags |= is_pure(self.pyast)
 
     def get_ast(self):
         return self.pyast
@@ -112,9 +130,6 @@ def set_to_map(s):
         v += 1
     return md
 
-def is_pure(ast):
-    return False
-#
 # Converts a python ast Function to a DefinedFunction
 # by calculating the closure
 def to_defined_function(function_p, parent_name, parent_closure):
@@ -129,8 +144,7 @@ def to_defined_function(function_p, parent_name, parent_closure):
     # the new children
     new_children = [to_defined_function(i,mname,mclosure) for i in children]
     
-
-    return DefinedFunction(mname, name, args, parent_closure, mclosure, stmts, new_children, is_pure(stmts))
+    return DefinedFunction(mname, name, args, parent_closure, mclosure, stmts, new_children, assign_vars)
 
 def mangle(a_name, name_p):
     x = "x90_" + a_name + "_" + name_p
