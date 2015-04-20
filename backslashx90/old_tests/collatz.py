@@ -8,6 +8,7 @@ def mul3p1(x):
     return x + x + x + 1
 
 def collatz(x):
+
     return 0 if x == 1 else \
             1+collatz(div2(x)) if even(x) else 1+collatz(mul3p1(x))
 

@@ -105,6 +105,7 @@ class Stage1:
             #     var = CallClosure(lhs_prime)
             self.buffer += [core.Assign(var, core.CallClosure(lhs_prime, newargs))]
             self.joinable_vars.add(var)
+            print "JOINABLE VARS: ", self.joinable_vars
         return var
 
     #Adds an assemply node to the list of instructions
@@ -138,7 +139,7 @@ class Stage1:
         if varname is None:
             return self.base_cov(orig)
         else:
-            return core.Name(varname)
+            return self.mkname(varname)
     def flatten_to_var(self, orig):
         tmp = self.loose_flatten(orig)
         ret = self.try_var(tmp, orig)
