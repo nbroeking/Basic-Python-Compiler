@@ -68,6 +68,14 @@ class DefinedFunction:
                     return False
                 return True
 
+            if isinstance(pyast, ast.Subscript):
+                name = pyast.getChildren()[0]
+                if isinstance(name, ast.Name):
+                    if name.getChildren()[0] in self.args:
+                        return False
+                
+                
+
             if isinstance(pyast, ast.Print):
                 return False
 
