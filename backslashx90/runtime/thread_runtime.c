@@ -37,7 +37,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
 
     if(fn->u.f.flags & IS_PURE) {
         pthread_create(&thread, NULL, __thread_start, args);
- //       fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
+   //     fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
         return thread;
     } else {
      /* run synchronously if impure */
@@ -52,5 +52,6 @@ void join_thread(pthread_t p) {
         return;
     }
     pthread_join(p, NULL);
+ //   fprintf(stderr, "Join thread %lu\n", (unsigned long)p);
 }
 
