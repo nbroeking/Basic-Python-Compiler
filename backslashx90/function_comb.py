@@ -68,7 +68,7 @@ class DefinedFunction:
                     return False
                 return True
 
-            if isinstance(pyast, ast.Subscript):
+            elif isinstance(pyast, ast.Subscript):
                 name = pyast.getChildren()[0]
                 if isinstance(name, ast.Name):
                     if name.getChildren()[0] in self.args:
@@ -76,10 +76,10 @@ class DefinedFunction:
                 
                 
 
-            if isinstance(pyast, ast.Print):
+            elif isinstance(pyast, ast.Print):
                 return False
 
-            if isinstance(pyast, ast.CallFunc):
+            elif isinstance(pyast, ast.CallFunc):
                 if isinstance(pyast.getChildren()[0], ast.Name):
                     name = pyast.getChildren()[0].getChildren()[0]
                     if name in child_map:
@@ -89,10 +89,11 @@ class DefinedFunction:
                         return False
 
 
-            for i in pyast.getChildNodes():
-                if not is_pure(i):
-                    return False
-            return True
+            else:
+                for i in pyast.getChildNodes():
+                    if not is_pure(i):
+                        return False
+                return True
 
         self.flags |= is_pure(self.pyast)
 
