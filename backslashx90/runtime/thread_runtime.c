@@ -35,7 +35,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
         args->args[i] = va_arg(l, u32_t);
     }
 
-    if(fn->u.f.flags & IS_PURE) {
+    if(fn->u.f.flags == 1) {
         pthread_create(&thread, NULL, __thread_start, args);
         fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
         return thread;

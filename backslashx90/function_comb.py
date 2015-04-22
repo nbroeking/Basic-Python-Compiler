@@ -65,34 +65,44 @@ class DefinedFunction:
             if isinstance(pyast, ast.Name):
                 name = pyast.getChildren()[-1] 
                 if not (name in self.args or name in self.local_vars):
-                    return False
-                return True
+                    print "false from name", name
+                    return 0
+                return 1
 
             elif isinstance(pyast, ast.Subscript):
                 name = pyast.getChildren()[0]
                 if isinstance(name, ast.Name):
                     if name.getChildren()[0] in self.args:
-                        return False
+                        print "false from subscript", name
+                        return 0
                 
                 
 
             elif isinstance(pyast, ast.Printnl):
-                return False
+                print "false from print"
+                return 0
 
             elif isinstance(pyast, ast.CallFunc):
                 if isinstance(pyast.getChildren()[0], ast.Name):
                     name = pyast.getChildren()[0].getChildren()[0]
                     if name in child_map:
                         if child_map[name].flags == 0:
-                            return False
-                        return True
+                            print "false from impure child", name
+                            return 0
+                        return 1
+
+                    elif name in self.args:
+                        return (1 << self.args.index(name)) << 1
 
 
             else:
+                ret = 1
                 for i in pyast.getChildNodes():
-                    if not is_pure(i):
-                        return False
-                return True
+                    mask = is_pure(i)
+                    if not mask:
+                        return 0
+                    ret |= mask
+                return ret
 
         self.flags |= is_pure(self.pyast)
 
