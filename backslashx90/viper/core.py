@@ -120,7 +120,7 @@ class While(CoreNode):
         self.cond_var = cond_var
 
     def _to_str(self):
-        return "while (%s) {\n%s\n}" % (self.cond, "\n".join(map(str,self.stmts)))
+        return "while (%s) {\n%s\n}" % (";".join([x._to_str() for x in self.cond]), "\n".join(map(str,self.stmts)))
 
 class Or(CoreNode):
     def __init__(self, lhs, rhs):

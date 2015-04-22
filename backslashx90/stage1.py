@@ -153,18 +153,29 @@ class Stage1:
         self.addAsm(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond])));
 
         then_nodes = pyst.getChildren()[1]
+        else_joinable = set()
         if pyst.getChildren()[2] is None:
             else_nodes = []
         else:
-            else_nodes = flatten(pyst.getChildren()[2], False, self.joinable_vars)
+            sg1 = Stage1(False, self.joinable_vars)
+            else_nodes = sg1.outer_flatten(pyst.getChildren()[2])
+            else_joinable |= sg1.joinable_vars
 
-        self.addAsm(core.If(core.Name(real_cond), flatten(then_nodes, False, self.joinable_vars), else_nodes))
+        sg1 = Stage1(False, self.joinable_vars)
+        then_flatten = sg1.outer_flatten(then_nodes)
+        # self.joinable_vars |= sg1.joinable_vars | else_joinable
+
+        self.addAsm(core.If(core.Name(real_cond), then_flatten, else_nodes))
         return None
 
     #Losse flatten a while
     def loose_flatten_while(self, pyst):
         cond = pyst.getChildren()[0]
         stmts = pyst.getChildren()[1]
+
+        sg1 = Stage1(False, self.joinable_vars)
+        stmts_flat = sg1.flatten(stmts)
+        self.joinable_vars |= sg1.joinable_vars
 
         old_buffer = self.buffer
         self.buffer = []
@@ -175,8 +186,9 @@ class Stage1:
         real_cond = self.tmpvar()
         cond_flat.append(core.Assign(real_cond, core.CallFunc(core.Name("is_true"), [cond_var])))
 
+        sg1 = Stage1(False, self.joinable_vars)
+        stmts_flat = sg1.flatten(stmts)
 
-        stmts_flat = flatten(stmts)
 
         self.addAsm(core.While(cond_flat, real_cond, stmts_flat))
         return None
@@ -533,7 +545,7 @@ class Stage1:
         if self.root:
             for i in self.joinable_vars:
                 self.buffer.append(core.Join(i))
-
+        self.joinable_vars = set()
         return self.buffer
 
 # simply call flatten on a stage1
