@@ -76,7 +76,7 @@ class DefinedFunction:
                 
                 
 
-            elif isinstance(pyast, ast.Print):
+            elif isinstance(pyast, ast.Printnl):
                 return False
 
             elif isinstance(pyast, ast.CallFunc):
