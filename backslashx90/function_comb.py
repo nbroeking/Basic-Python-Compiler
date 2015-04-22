@@ -99,7 +99,10 @@ class DefinedFunction:
                 ret = 1
                 for i in pyast.getChildNodes():
                     mask = is_pure(i)
+                    if mask is None:
+                        mask = 1
                     if not mask:
+                        print "impure ", i, mask
                         return 0
                     ret |= mask
                 return ret
