@@ -62,37 +62,48 @@ class DefinedFunction:
                 
 
         def is_pure(pyast):
-            if isinstance(pyast, ast.Name):
-                name = pyast.getChildren()[-1] 
-                if not (name in self.args or name in self.local_vars):
-                    return False
-                return True
-
-            if isinstance(pyast, ast.Subscript):
-                name = pyast.getChildren()[0]
-                if isinstance(name, ast.Name):
-                    if name.getChildren()[0] in self.args:
+            def loose_is_pure(pyast):
+                if isinstance(pyast, ast.Name):
+                    name = pyast.getChildren()[-1] 
+                    if not (name in self.args or name in self.local_vars):
+                        print "False from using a variable from outside", name
                         return False
-                
-                
-
-            if isinstance(pyast, ast.Print):
-                return False
-
-            if isinstance(pyast, ast.CallFunc):
-                if isinstance(pyast.getChildren()[0], ast.Name):
-                    name = pyast.getChildren()[0].getChildren()[0]
-                    if name in child_map:
-                        if child_map[name].flags == 0:
+                    return True
+    
+                elif isinstance(pyast, ast.Subscript):
+                    name = pyast.getChildren()[0]
+                    if isinstance(name, ast.Name):
+                        if name.getChildren()[0] in self.args:
+                            print "False from using a subscript"
                             return False
-                    else:
-                        return False
-
-
-            for i in pyast.getChildNodes():
-                if not is_pure(i):
+                    
+                    
+    
+                elif isinstance(pyast, ast.Print):
+                    print "False from using a print"
                     return False
-            return True
+    
+                elif isinstance(pyast, ast.CallFunc):
+                    if isinstance(pyast.getChildren()[0], ast.Name):
+                        name = pyast.getChildren()[0].getChildren()[0]
+                        if name in child_map:
+                            if child_map[name].flags == 0:
+                                print "False for using impure child"
+                                return False
+                        elif name == self.origname:
+                            return True
+                        else:
+                            print "False for using a function"
+                            return False
+
+                else:
+                    for i in pyast.getChildNodes():
+                        if not is_pure(i):
+                            return False
+                        return True
+
+
+            return loose_is_pure(pyast)
 
         self.flags |= is_pure(self.pyast)
 
