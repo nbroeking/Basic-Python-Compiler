@@ -37,7 +37,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
 
     if(fn->u.f.flags == 1) {
         pthread_create(&thread, NULL, __thread_start, args);
-        fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
+        // fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
         return thread;
     } else {
      if(fn->u.f.flags != 0) {
@@ -51,7 +51,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
                     ptra3->tag == FUN &&
                     ptra3->u.f.flags == 1);
                 else {
-                    fprintf(stderr, "Conditionally pure false\n");
+                    // fprintf(stderr, "Conditionally pure false\n");
                     __thread_start(args);
                     return 0;
                 }
@@ -62,10 +62,10 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
 
         /* Conditional purity is true. So we can spawn a thread */
         pthread_create(&thread, NULL, __thread_start, args);
-        fprintf(stderr, "Conditionally pure thread %lu\n", (unsigned long)thread);
+        // fprintf(stderr, "Conditionally pure thread %lu\n", (unsigned long)thread);
         return thread;
      }
-     fprintf(stderr, "Not pure\n");
+     // fprintf(stderr, "Not pure\n");
      /* run synchronously if impure */
      __thread_start(args);
      free(args);
