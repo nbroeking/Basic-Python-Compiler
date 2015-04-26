@@ -31,7 +31,7 @@ for root, _, files in os.walk('final_tests/'):
             end = time.time()
 
             print ("Execution time: %fms" % ((end - start) * 1000.0))
-            print ("%s %s \x1b[01;32m%f\x1b[00;0m" % (f, " " * (100 - len(f)), (end-start) - runtimes[f]))
+            print ("%s %s \x1b[01;32m%f\x1b[00;0m" % (f, " " * (100 - len(f)), runtimes[f] / (end-start)))
 
 
 
