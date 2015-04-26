@@ -6,6 +6,8 @@
 
 #include "runtime.h"
 
+#include <assert.h>
+
 typedef unsigned long u32_t;
 typedef long s32_t;
 
@@ -22,10 +24,12 @@ extern void* __thread_start(void*);
 pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
     pthread_t thread;
     struct thread_args* args = malloc(sizeof(struct thread_args));
+    assert(args);
 
     args->fn = fn;
     args->into = (s32_t*)retval;
     args->args = malloc(sizeof(u32_t)*arg_count);
+    assert(args->args);
     args->nargs = arg_count;
 
     va_list l;
