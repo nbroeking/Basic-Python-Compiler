@@ -78,6 +78,6 @@ void join_thread(pthread_t p) {
         return;
     }
     pthread_join(p, NULL);
-    fprintf(stderr, "Join thread %lu\n", (unsigned long)p);
+    // fprintf(stderr, "Join thread %lu\n", (unsigned long)p);
 }
 
