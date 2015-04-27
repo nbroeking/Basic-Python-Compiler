@@ -6,6 +6,7 @@ runtimes = {}
 times = []
 diffs = []
 
+os.system('make -f mk notests')
 for root, _, files in os.walk('final_tests/'):
     for f in files:
         if f.endswith('.py'):
@@ -23,6 +24,7 @@ for root, _, files in os.walk('final_tests/'):
 
 os.system('git checkout hw6')
 
+os.system('make -f mk notests')
 for root, _, files in os.walk('final_tests/'):
     for f in files:
         if f.endswith('.py'):
