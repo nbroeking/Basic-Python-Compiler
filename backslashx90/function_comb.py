@@ -93,6 +93,8 @@ class DefinedFunction:
 
                     elif name in self.args:
                         return (1 << self.args.index(name)) << 1
+                    else:
+                        return 0
 
 
             else:
