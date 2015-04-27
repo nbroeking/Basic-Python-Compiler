@@ -36,7 +36,7 @@ for root, _, files in os.walk('final_tests/'):
             print ("%s %s \x1b[01;32m%f\x1b[00;0m" % (f, " " * (100 - len(f)), dif))
             diffs.append(dif)
 
-print ("Average: " + sum(diffs)/len(diffs))
+print ("Average: " + str(sum(diffs)/len(diffs)))
 
 
 
