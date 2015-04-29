@@ -6,6 +6,8 @@
 
 #include "runtime.h"
 
+#include <assert.h>
+
 typedef unsigned long u32_t;
 typedef long s32_t;
 
@@ -22,10 +24,12 @@ extern void* __thread_start(void*);
 pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
     pthread_t thread;
     struct thread_args* args = malloc(sizeof(struct thread_args));
+    assert(args);
 
     args->fn = fn;
     args->into = (s32_t*)retval;
     args->args = malloc(sizeof(u32_t)*arg_count);
+    assert(args->args);
     args->nargs = arg_count;
 
     va_list l;
@@ -37,7 +41,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
 
     if(fn->u.f.flags == 1) {
         pthread_create(&thread, NULL, __thread_start, args);
-        fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
+        // fprintf(stderr, "Starting a new thread %lu\n", (unsigned long)thread);
         return thread;
     } else {
      if(fn->u.f.flags != 0) {
@@ -51,7 +55,7 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
                     ptra3->tag == FUN &&
                     ptra3->u.f.flags == 1);
                 else {
-                    fprintf(stderr, "Conditionally pure false\n");
+                    // fprintf(stderr, "Conditionally pure false\n");
                     __thread_start(args);
                     return 0;
                 }
@@ -62,10 +66,10 @@ pthread_t dispatch(u32_t* retval, big_pyobj* fn, int arg_count, ...) {
 
         /* Conditional purity is true. So we can spawn a thread */
         pthread_create(&thread, NULL, __thread_start, args);
-        fprintf(stderr, "Conditionally pure thread %lu\n", (unsigned long)thread);
+        // fprintf(stderr, "Conditionally pure thread %lu\n", (unsigned long)thread);
         return thread;
      }
-     fprintf(stderr, "Not pure\n");
+     // fprintf(stderr, "Not pure\n");
      /* run synchronously if impure */
      __thread_start(args);
      free(args);
@@ -78,6 +82,6 @@ void join_thread(pthread_t p) {
         return;
     }
     pthread_join(p, NULL);
-    fprintf(stderr, "Join thread %lu\n", (unsigned long)p);
+    // fprintf(stderr, "Join thread %lu\n", (unsigned long)p);
 }
 

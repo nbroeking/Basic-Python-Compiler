@@ -14,5 +14,8 @@ package:
 	cd package && zip -r ../package.zip *
 	chmod o+r package.zip
 
+notests:
+	cd runtime && make
+
 
 clean: ;rm tests.zip; rm -r package; rm -rf tmp; cd runtime && make clean; cd .. ;rm *.pyc ; rm tests/*.in ; rm tests/file* ; rm package.zip ; rm tests/tester ; rm tests/test
