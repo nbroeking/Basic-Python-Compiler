@@ -311,8 +311,33 @@ def impure2(x):
 An example of a pure function is:
 
 \begin{minted}{Python}
+def pure0(x):
+    return x + 5
+
+def pure1(x):
+    lst = [1,2,3]
+    return lst[0] + lst[1] + lst[2] +- x
 \end{minted}
 
+\subsubsection*{Conditional Purity}
+
+During this project, we have coined a concept known as \emph{Conditional
+Purity}. A conditionally pure function is a function that may be considered
+pure depending on the inputs given to it as arguments. For example, consider
+the following code:
+
+
+\begin{minted}{Python}
+def conditionally_pure(f, x, y):
+    return f(x) + f(y)
+\end{minted}
+
+This function is cosidered impure by the rules stated above since it calls a function defined outside
+its scope. This function; however, is pure if the function $f$ is pure. As such, this function is
+conditionally pure on $f$. We can represent this conditionally pure attribute and at runtime detect
+if the \emph{call} to the function is pure or impure.
+
+\subsubsection{Purity Marking}
 
 
 \end{document}
