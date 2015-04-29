@@ -1,0 +1,318 @@
+\documentclass{acm_proc_article-sp}
+
+\usepackage{lipsum}
+\usepackage{minted}
+
+\title{Implicit Parallelism in Compiled Python Programs}
+\author{
+    Nicolas Broeking \\
+    \small Department of Computer Science \\
+    \small University of Colorado Boulder \\
+    \small \textbf{CSCI 5502} \\
+    \small nicolas.broeking@colorado.edu \\
+    \and
+    Joshua Rahm \\
+    \small Department of Computer Science \\
+    \small University of Colorado Boulder \\
+    \small \textbf{CSCI 5502} \\
+    \small joshua.rahm@colorado.edu \\
+}
+
+
+\begin{document}
+
+% \toappear{Permission to make digital or hard copies of all or part of this work for
+% personal or classroom use is granted without fee provided that copies are not
+% made or distributed for profit or commercial advantage and that copies bear
+% this notice and the full citation on the first page. To copy otherwise, or
+% republish, to post on servers or to redistribute to lists, requires prior
+% specific permission..  Copyright 2015 Broeking, Rahm, Hoffee}
+
+\maketitle
+
+\begin{abstract}
+
+In the second half of the current decade, Moore's law has
+finally run out of steam as processor clock speeds have stagnated. However,
+while processor clock speeds remain the same, the number of CPUs and processors
+present on a device has drastically increased.  This is especially true with
+the advent of general purpose GPUs (GPGPUs). How to effectively use these cores
+is still a hard problem in software engineering especially because parallel
+processing requires careful attention to protect against race conditions and
+other caveats.  As a result, the approach many languages take is to outlaw true
+parallelism, but we believe that the answer is to bake parallelism into the emitted
+assembly code so that the programmer never need know of its existence, but may still
+enjoy the many benefits of a multi-core machine.
+
+\end{abstract}
+
+\section*{Introduction}
+When programming, we do not always use the machine in the most time efficient manner.
+This is expressed mainly in programs that have parts which operate an execute independent
+of each other but are forced by the language or the programmer to execute in sequence rather
+than in parallel. We propose that instead of relying on the programmer to implement the threading,
+we can allow the compiler to do some threading implicitly to avoid common errors programmers make
+when trying to thread their applications.
+
+We build this compiler such that it can detect if a function is pure; that is, a function
+whose return value depends solely on the input supplied to it. Using this, we can parallelize
+p3 in three stages.
+
+%%% Should I go into more detail here!!!??? %%%
+First, we extend the runtime to have some more functions. These functions aide us in creating
+the environment needed to do necessary threading at runtime. Second, we change the compiler to
+emit the necessary calls to the extended runtime. And finally, we need to analyze the purity
+of each function; is a function pure, impure or something in-between.
+
+Using the steps from above, we successfully created a implicitly parallelizing compiler that
+showed a significant increase in performance on many tests; all the while passing every
+one of our 157 tests, including all of the instructors tests.
+
+This project has left us with some features which we would like to see implemented, but do to
+time constraints never got around to implementing, such as function scoring and implementing
+a ``Green Thread'' model.
+
+\section*{Problem}
+
+There are many programs that can easily benefit from parallelism.
+Consider the following program:
+
+\inputminted{python}{pi.py}
+
+In this program, we have several calls to \verb|calculatePi|, and this
+function take 10 minutes to run, as a result this program takes over an hour
+to run. This is most unfortunate, as this program is very parallelizable, just
+the programmer decided not to implement any parallelism, and one cannot be blamed
+for this decision. When implementing parallelism manually, not only is it anemic
+in imperative languages, but is also full of potential pitfalls for the programmer
+dealing with synchronization and race conditions.
+
+If there is a way to make the machine detect when functions may be
+parallelized and do the parallelism for the programmer, removing those potential
+caveats and tedious laboring, there is the potential to create a true gangbusters
+compiler.
+
+For the Python programming language, implicit parallelism is not an easy
+problem to solve. Some languages, like Haskell, already have implicit
+parallelism, but this is under the structure of a very strong, static type
+system that makes it much easier to detect when blocks of code and functions
+may be able to run in parallel, all of which may be done at compile time. We
+have the task of parallelizing python code which is much more dynamic and as
+such, much of our logic for implementing the project must also be done
+dynamically.
+
+
+\section*{Implementation}
+
+We extended the homework 6 compiler in 3 specific ways in order to achieve our
+goals. First was extending the runtime to include functions for the compiled
+programs to use. Second, was to emit the new assembly by extending the compiler
+code itself, and finally, detecting pure functions.
+
+\subsection*{1. Runtime}
+We have extended the runtime to include two new public functions; \verb|dispatch| and
+\verb|join|. The headers of which are shown below:
+
+\begin{minted}{C}
+u32_t dispatch(u32_t* out, pyobj func, int n, ...);
+void join(u32_t);
+\end{minted}
+
+The function dispatch takes an address to write the return value to, a function
+to call and a list of arguments passed as a \verb|va_list|. The return value of
+dispatch is a thread id. This thread id is later used by the \verb|join| function
+to know what thread to join on.
+
+When dispatch is called, it does two things. First it check to see if the
+function passed is pure. This is done via metadata attached to the function at
+compile time, a stage we will talk more about in the next section. If the
+function is pure, \verb|dispatch| will then spawn a thread that runs a small
+assembly routine \verb|__thread_start| that simply calls the function
+\verb|func| with the arguments in the \verb|va_list| and stores the result in
+the \verb|*out|. This thread id is then returned from the function to be joined
+at a later time.
+
+If the function is not pure, dispatch will just run the function sequentially
+store the result in \verb|*out| and finally return 0, indicating the NULL
+thread id.
+
+Finally, \verb|join| is the analog to \verb|dispatch|. For every \verb|dispatch|,
+there should be at least one matching \verb|join|. All join does is join on the thread
+id if it is not 0 otherwise it does nothing and just returns.
+
+\subsection*{2. Emit Runtime Calls}
+
+Extending the compiler itself was the most difficult parts of this project.
+First we realized that now, our return values had to be on the stack since
+we needed to get the address to them. As a result we needed to add another rule
+to our graph coloring called \verb|stack_only| meaning that the variable in
+question had to be on the stack so we can take the address of it.
+
+Once that step was done, it was time to implement the famous \verb|leal| instruction
+to get a pointer to the return value to pass as an argument to the \verb|dispatch|
+function.
+
+We ended up having to implement all the liveness and spill rules for this new instruction.
+
+The liveness rules for \verb|leal| are
+
+\[
+L_{before}(leal(s,d)) = (L_{after} \cup \{s\}) \setminus \{d\}
+\]
+
+After adding support for the leal instruction, we are able to modify our callfunc
+to emit assembly code that calls the runtime functions. For example, the program:
+
+\begin{minted}{Python}
+ def add(x, y):
+	return x + y
+
+x = add(1,2)
+y = add(4, 6)
+z = add(7,8)
+
+print x
+print z
+print y
+\end{minted}
+
+will be preprocessed to semantically be equivalent to the following:
+
+\begin{minted}{Python}
+def add(x, y):
+	return x + y
+x, y, z
+tid1 = dispatch(&x, add, 1, 2)
+tid2 = dispatch(&y, add, 4, 6)
+tid3 = dispatch(&z, add, 7, 8)
+
+join(tid1)
+print x
+join(tid3)
+print z
+join(tid2)
+print y
+\end{minted}
+
+In this new program, it is easy to see that instead of calling the functions directly,
+we instead call the dispatch function with not only the original arguments, but also
+a pointer to the return value (denoted by the C-style \verb|&|) and a closure to
+call. Finally, before each value is used, the compiler is smart enough to inject a join
+to ensure the thread calculating that value has stopped before the value is used.
+
+\subsubsection*{Thread Liveness}
+
+To implement the rule where each dispatch has at least one matching join, we
+had to implement a sense of thread liveness. That is, in all branches of the
+execution, we must make sure that the thread calculating a value is joined.
+
+We do this in our flattening phase. As we iterate through each instruction, if we
+see an assign from a \verb|CallFunc| then we add the left hand side of the assignment
+to a list called \verb|joinable_vars|. At this point, if we see a variable being
+used that is in the \verb|joinable_vars|, we inject a join statement on that thread
+id before the usage of that variable and proceed to remove that variable from the set
+of \verb|joinable_vars|. At this point the Join node contains just the variable name,
+it is not until the next phase that the variable names get mapped to thread ids.
+If we come to an if statement, we implement a conservative policy that propagates
+a copy of \verb|joinable_vars| as we decend into the if statement. That way, the
+if statement does not affect the \verb|joinable_vars| as we must assume that
+% This seems poorly worded
+no variables are joined in the if statement and still emit code to join those variables
+after the if statement even if it turns out to be redundant.
+
+Similarly while loops must be assumed to not have been executed and as such, any
+threads spawned outside the loop must also be joined outside the loop even if they
+happened to be joined inside the loop.
+
+For simplicity, we join all not joined threads at the end of each body of code.
+
+
+For example, the following code snippet exemplifies this liveness
+
+\begin{minted}{ Python }
+z = input()
+x = f(a)
+
+y = 0
+if z == 3:
+    y = g(x + 2)
+
+y = y + x + 1
+\end{minted}
+
+which is shown here
+
+\begin{minted}{ Python }
+z = input()
+        {z}
+x = f(a)
+        {z, x}
+y = 0
+        <- Join(z)
+        {x}
+if z == 3:
+            <- Join(x)
+            {}
+    y = g(x + 2)
+            {y}
+            <- Join(y)
+
+        {x}
+        <- Join(x)
+        {}
+y = y + x + 1
+\end{minted}
+
+\subsubsection*{Variable to Thread Mapping}
+
+As we move to the register selection phase of our compiler, our internal
+Core AST is filled with \verb|Join(x)| nodes where $x$ is the name of a variable.
+What we need to know is change the variable names to actual thread ids. The way
+we do this is, as we iterate through the Core AST, if we see an assign from a
+function call, we add the left hand side of the assignment to a dictionary and
+map it to a generated variable $t_x$ that represents the thread executing $x$. Once
+we see a \verb|Join(x)|, we swap it with a $CallFunc(Join, t_x)$ node, this then
+gets compiled into the correct instructions.
+
+
+\subsection*{3. Purity Analysis}
+
+Purity analysis is where a large portion of the work for this project went. We detect
+the purity of a function during the uniquify and heapify phases of the compiler. We walk
+through a function under the context that it is already pure and look for evidence that
+the function is not pure. Rules for a pure function are as follows:
+
+\begin{enumerate}
+\item The pure function may not access its outer closure, as this is subject to change and
+may produce impure results. (This includes recursive functions)
+\item A pure function may not access the subscripts of any arguments, or any local variable pointing
+to the arguments. As these are subject to change with race conditions and lead to impure results.
+\item A pure function may only call a pure inner function.
+\item A pure function may not call print as this may lead to different print ordering, leading
+to impure results.
+\end{enumerate}
+
+So some examples of impure functions would be 
+
+\begin{minted}{Python}
+def impure0(x):
+    return x[0]
+
+def impure1(x):
+    def f():
+        print "hi"
+    f()
+    return x
+
+def impure2(x):
+    return x + pure()
+\end{minted}
+
+An example of a pure function is:
+
+\begin{minted}{Python}
+\end{minted}
+
+
+
+\end{document}
