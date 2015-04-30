@@ -340,7 +340,121 @@ its scope. This function; however, is pure if the function $f$ is pure. As such,
 conditionally pure on $f$. We can represent this conditionally pure attribute and at runtime detect
 if the \emph{call} to the function is pure or impure.
 
-\subsubsection{Purity Marking}
+\subsubsection*{Purity Marking}
 
+In order to detect the purity of a function at runtime, we added an attribute to the function structure
+that consists of a 32-bit bitmask called $purity$. This bitmask is equal to 0 for impure functions, 1 for unconditionally
+pure functions, and, for conditionally pure function, $1 + \sum_{n=1}^{30}{e(n)2^{n+1}}$ where $n$ is the $n^{th}$
+argument and $e(n)=1$ if the function is conditionally pure on the $n^{th}$ argument. $e(n)=0$ otherwise. In other
+words, if the function is conditionally dependent on argument $n$, then the $n^{th} + 1$ bit is set to $1$.
+
+The way the compiler stores this bitmask persistently is with a \verb|.long| tag that resides
+in the \verb|.text| section before the definition of each function. For example, the functions
+above produce the assembly:
+
+\begin{minted}{gas}
+.long 0
+impure:
+    pushl %ebp
+    movl %ebp, %esp
+    ...
+
+.long 1
+pure:
+    pushl %ebp
+    movl %ebp, %esp
+    ...
+
+.long 3 # binary 0000 ... 0011
+conditionally_pure:
+    pushl %ebp
+    movl %ebp, %esp
+    ...
+\end{minted}
+
+We modified create closure to take the value from the function pointer offset $-4$ to extract the tag
+put by the compiler. This way, the dispatch function can retrieve all the information it needs to
+determine if a function call can be parallelized at runtime.
+
+\section*{Results}
+
+\subsection*{Benchmarks}
+We ran the new compiler with implicit parallelim baked into it on all of the previous tests we made for
+the compilers from the past and all passed. This shows that our compiler is still semantically correct.
+We also benchmarked the tests against the compiler submitted for homework 6. Overall the compiler produced
+code that ran $24.5\%$ slower than the homework 6 counterpart. This is mostly due to the extra overhead
+of the dispatch function along with the overhead of spawning threads for simple functions, as our compiler
+indiscriminatly spawns threads for \emph{all} pure functions.
+
+We did find very promising results for tailored examples run againts the compiler. The following code was
+run against both the homework 6 compiler and the new compiler:
+
+\begin{minted}{Python}
+def map_sum(f, x, y):                                                                                                                                                                                               
+    return f(x) + f(y)                                                                                                                                                                                              
+                                                                                                                                                                                                                    
+def addOne(x):                                                                                                                                                                                                      
+    y = 0                                                                                                                                                                                                           
+    lst = [1,2,4]                                                                                                                                                                                                   
+    while y != 10000000:                                                                                                                                                                                            
+        y = y + lst[2] +- (lst[1] + lst[0])                                                                                                                                                                         
+    y = y +- 9999999                                                                                                                                                                                                
+    x = x + y                                                                                                                                                                                                       
+    return x                                                                                                                                                                                                        
+                                                                                                                                                                                                                    
+x = map_sum(addOne, 4, 5)                                                                                                                                                                                           
+y = map_sum(addOne, 5, 6)                                                                                                                                                                                           
+z = map_sum(addOne, 7, 8)                                                                                                                                                                                           
+w = map_sum(addOne, 9, 10)                                                                                                                                                                                          
+v = map_sum(addOne, 11, 12)                                                                                                                                                                                         
+                                                                                                                                                                                                                    
+print x + y +- z + w +- v
+\end{minted}
+
+With this test case, we saw a 4x speedup with the new compiler and an 8x
+speedup from interpreted Python on an AMD Phenom II processor. Notice that
+this is with the \verb|map_sum| function being a conditionally pure function
+and \verb|addOne| function being pure, so the compiler was able to detect purity
+and conditional purity and the runtime was able to detect pure calls.
+
+Even though this is a fairly tailored example, it does show promise into the potential
+power of an implicitly parallelizing compilers and interpreters even if the language
+is a dynamically typed language. 
+
+\section*{Future Steps}
+With the limited implementation time of this project, we were not able to implement everything
+we wanted.
+
+\subsection*{Function Scoring}
+The ability to score a function's complexity can eliminate the problem where
+simple functions are unnecessarily spawned in a separate thread. The way function
+scoring would have to be implemented is at runtime executing some form of static
+analysis to try to estimate how many instructions will be executed on average by
+this function. If the estimated number of instructions is more that the overhead
+for starting a joining a thread, then it should be marked as parallelizeable.
+
+\subsection*{Better Purity Rules}
+Right now, our purity rules are Draconian. A future feature might be to liberalize
+the purity rules by performing more static analysis to determine if, for example, 
+calls to outer functions are provably pure or if free variables used are guaranteed
+to be read only. This requires analysis not on the function itself, but all parent
+function to make sure the variables read from have no chance of changing by the
+functions that share the same closure.
+
+\subsection*{Green Thread Model}
+
+Languages like Haskell have a ``Green Thread'' model. What this means
+is that instead of leveraging OS threads, these languages use user-space
+``green'' threads. This makes spawning, joining and signaling green threads
+much, much faster than the same operations for an OS thread. The disadvantage
+is, of course, that green threads are not able to run on separate cores by
+themselves. This is why languages like Haskell spawn one OS thread for each
+CPU on the machine and then schedule the many user-space threads on these
+separate OS threads. This allows for more efficient usage of processor resources
+and reduces calls to the kernel to use the threads.
+
+\subsection{More Programmer Control}
+
+Finally, sometimes
 
 \end{document}
