@@ -48,7 +48,7 @@ enjoy the many benefits of a multi-core machine.
 
 \section*{Introduction}
 When programming, we do not always use the machine in the most time efficient manner.
-This is expressed mainly in programs that have parts which operate an execute independent
+This is expressed mainly in programs that have parts which operate and execute independent
 of each other but are forced by the language or the programmer to execute in sequence rather
 than in parallel. We propose that instead of relying on the programmer to implement the threading,
 we can allow the compiler to do some threading implicitly to avoid common errors programmers make
@@ -59,14 +59,14 @@ whose return value depends solely on the input supplied to it. Using this, we ca
 p3 in three stages.
 
 %%% Should I go into more detail here!!!??? %%%
-First, we extend the runtime to have some more functions. These functions aide us in creating
+First, we extend the runtime to have some more functions. These functions aid us in creating
 the environment needed to do necessary threading at runtime. Second, we change the compiler to
 emit the necessary calls to the extended runtime. And finally, we need to analyze the purity
 of each function; is a function pure, impure or something in-between.
 
-Using the steps from above, we successfully created a implicitly parallelizing compiler that
+Using the steps from above, we successfully created an implicitly parallelizing compiler that
 showed a significant increase in performance on many tests; all the while passing every
-one of our 157 tests, including all of the instructors tests.
+one of our 157 tests, including all the instructor's tests.
 
 This project has left us with some features which we would like to see implemented, but do to
 time constraints never got around to implementing, such as function scoring and implementing
@@ -89,8 +89,8 @@ dealing with synchronization and race conditions.
 
 If there is a way to make the machine detect when functions may be
 parallelized and do the parallelism for the programmer, removing those potential
-caveats and tedious laboring, there is the potential to create a true gangbusters
-compiler.
+caveats and tedious laboring, there is the potential to create a
+compiler that goes gangbusters.
 
 For the Python programming language, implicit parallelism is not an easy
 problem to solve. Some languages, like Haskell, already have implicit
@@ -123,7 +123,7 @@ to call and a list of arguments passed as a \verb|va_list|. The return value of
 dispatch is a thread id. This thread id is later used by the \verb|join| function
 to know what thread to join on.
 
-When dispatch is called, it does two things. First it check to see if the
+When dispatch is called, it does two things. First it checks to see if the
 function passed is pure. This is done via metadata attached to the function at
 compile time, a stage we will talk more about in the next section. If the
 function is pure, \verb|dispatch| will then spawn a thread that runs a small
@@ -221,7 +221,7 @@ the \verb|joinable_vars| as we must assume that
 no variables are joined in the if statement and still emit code to join those
 variables after the if statement even if it turns out to be redundant.
 
-Similarly while loops must be assumed to not have been executed and as such,
+Similarly, loops must be assumed to not have been executed and as such,
 any threads spawned outside the loop must also be joined outside the loop even
 if they happened to be joined inside the loop.
 
@@ -379,14 +379,14 @@ determine if a function call can be parallelized at runtime.
 \section*{Results}
 
 \subsection*{Benchmarks}
-We ran the new compiler with implicit parallelim baked into it on all of the previous tests we made for
+We ran the new compiler with implicit parallelism baked into it on all the previous tests we made for
 the compilers from the past and all passed. This shows that our compiler is still semantically correct.
 We also benchmarked the tests against the compiler submitted for homework 6. Overall the compiler produced
 code that ran $24.5\%$ slower than the homework 6 counterpart. This is mostly due to the extra overhead
 of the dispatch function along with the overhead of spawning threads for simple functions, as our compiler
-indiscriminatly spawns threads for \emph{all} pure functions.
+indiscriminately spawns threads for \emph{all} pure functions.
 
-We did find very promising results for tailored examples run againts the compiler. The following code was
+We did find very promising results for tailored examples run against the compiler. The following code was
 run against both the homework 6 compiler and the new compiler:
 
 \begin{minted}{Python}
@@ -411,7 +411,7 @@ v = map_sum(addOne, 11, 12)
 print x + y +- z + w +- v
 \end{minted}
 
-With this test case, we saw a 4x speedup with the new compiler and an 8x
+With this test case, we saw a 4x speedup with the new compiler and a 8x
 speedup from interpreted Python on an AMD Phenom II processor. Notice that
 this is with the \verb|map_sum| function being a conditionally pure function
 and \verb|addOne| function being pure, so the compiler was able to detect purity
@@ -453,8 +453,37 @@ CPU on the machine and then schedule the many user-space threads on these
 separate OS threads. This allows for more efficient usage of processor resources
 and reduces calls to the kernel to use the threads.
 
-\subsection{More Programmer Control}
+\subsection*{More Programmer Control}
 
-Finally, sometimes
+Finally, sometimes the compiler should not be in charge of making decisions without
+the programmers blessing. As such, it may be in the interests of the language designer
+no allow additional annotations (like C's \verb|#pragma| or Java's \verb|@interface|) that
+allow the programmer to specify what functions should be parallelize and what functions are
+better left to run sequentially. After all, the programmer knows best how the code will
+execute and whether it makes sense to have the compiler parallelize the code.
+
+
+\section*{Conclusion}
+
+We started out with the challenge to build a compiler for a dynamically typed
+language and that we have done. We then challenged ourselves to make a compiler
+that not only compiled Python, but also was able to implicitly parallelize it.
+This is hard work seeing as even the Python interpreter does not even allow for
+explicit parallelism. Nonetheless, we were able to put together a working prototype
+that was able to parallelize simple programs.
+
+We faced challenges with the dynamisms of Python, and realized there was no way
+around doing much of the logic at runtime. Nonetheless, we were still able to
+produce a compiler that generated code capable of spawning threads at appropriate time.
+
+While our performance results at first may look discouraging as there was a general
+slowdown. However, we did see a very significant boost in speed for some tailored case
+which we believe implies that if the extensions mentioned above were to be implemented,
+we will see a significant improvement in the performance of nearly all cases.
+
+Overall, we consider the project to be a resounding success given the initial uncertainty
+about whether or not it would even be possible to parallelize Python code, or even do
+on the fly thread spawning and joining.
+
 
 \end{document}
