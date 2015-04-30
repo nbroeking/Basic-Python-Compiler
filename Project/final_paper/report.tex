@@ -376,6 +376,18 @@ We modified create closure to take the value from the function pointer offset $-
 put by the compiler. This way, the dispatch function can retrieve all the information it needs to
 determine if a function call can be parallelized at runtime.
 
+\section*{Literature Survey}
+
+The meat of our project was based off of a research project completed with IBM and the University of Illinois. This project
+they were able to implement a Programming Model called Implicit Parallelism with Ordered Transactions or IPOT for short. 
+IPOT is the idea that one can parallelize a sequential program using annotations. Each one of these annotations can be
+threaded at the start of the annotation and then joined again when another transaction needs the data from the transaction. 
+This gave us inspiration with how we wanted to structure our compiler.
+
+Our execution model almost identically matches the IPOT execution model. It has a spawn / squash stage which is the equivalent to our dispatch and join runtime functions. Instead of a purity analysis phase though it uses a conflict detection phase. The main difference is that we perform analysis at a function by function level. However if you are able to more fully optimize the code by parallelizing chunks then you need to perform conflict detection. For the purposes of our project we decided to go with purity analysis instead.
+
+While reviewing their paper, the use of annotations brought up an interesting question among our team. Is having the user annotate the blocks of code that can be parallelized truly implicit parallelism? We decided that no it isn't, and that we could extend their work by having the compiler do all the heavy lifting and create a truly implicit compiler.
+
 \section*{Results}
 
 \subsection*{Benchmarks}
